@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:isar/isar.dart';
 import '../main.dart';
 import '../models/cow.dart';
 import 'add_cow_screen.dart';
