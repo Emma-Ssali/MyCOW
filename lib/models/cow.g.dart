@@ -47,51 +47,46 @@ const CowSchema = CollectionSchema(
       name: r'farmId',
       type: IsarType.string,
     ),
-    r'name': PropertySchema(
-      id: 6,
-      name: r'name',
-      type: IsarType.string,
-    ),
     r'notes': PropertySchema(
-      id: 7,
+      id: 6,
       name: r'notes',
       type: IsarType.string,
     ),
     r'photoPath': PropertySchema(
-      id: 8,
+      id: 7,
       name: r'photoPath',
       type: IsarType.string,
     ),
     r'sex': PropertySchema(
-      id: 9,
+      id: 8,
       name: r'sex',
       type: IsarType.byte,
       enumMap: _CowsexEnumValueMap,
     ),
     r'source': PropertySchema(
-      id: 10,
+      id: 9,
       name: r'source',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 11,
+      id: 10,
       name: r'status',
       type: IsarType.byte,
       enumMap: _CowstatusEnumValueMap,
     ),
     r'syncStatus': PropertySchema(
-      id: 12,
+      id: 11,
       name: r'syncStatus',
       type: IsarType.byte,
       enumMap: _CowsyncStatusEnumValueMap,
     ),
     r'tagNumber': PropertySchema(
-      id: 13,
+      id: 12,
       name: r'tagNumber',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 14,
+      id: 13,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -129,7 +124,6 @@ int _cowEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
-  bytesCount += 3 + object.name.length * 3;
   {
     final value = object.notes;
     if (value != null) {
@@ -148,12 +142,7 @@ int _cowEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
-  {
-    final value = object.tagNumber;
-    if (value != null) {
-      bytesCount += 3 + value.length * 3;
-    }
-  }
+  bytesCount += 3 + object.tagNumber.length * 3;
   return bytesCount;
 }
 
@@ -169,15 +158,14 @@ void _cowSerialize(
   writer.writeString(offsets[3], object.createdBy);
   writer.writeDateTime(offsets[4], object.dateOfBirth);
   writer.writeString(offsets[5], object.farmId);
-  writer.writeString(offsets[6], object.name);
-  writer.writeString(offsets[7], object.notes);
-  writer.writeString(offsets[8], object.photoPath);
-  writer.writeByte(offsets[9], object.sex.index);
-  writer.writeString(offsets[10], object.source);
-  writer.writeByte(offsets[11], object.status.index);
-  writer.writeByte(offsets[12], object.syncStatus.index);
-  writer.writeString(offsets[13], object.tagNumber);
-  writer.writeDateTime(offsets[14], object.updatedAt);
+  writer.writeString(offsets[6], object.notes);
+  writer.writeString(offsets[7], object.photoPath);
+  writer.writeByte(offsets[8], object.sex.index);
+  writer.writeString(offsets[9], object.source);
+  writer.writeByte(offsets[10], object.status.index);
+  writer.writeByte(offsets[11], object.syncStatus.index);
+  writer.writeString(offsets[12], object.tagNumber);
+  writer.writeDateTime(offsets[13], object.updatedAt);
 }
 
 Cow _cowDeserialize(
@@ -194,19 +182,18 @@ Cow _cowDeserialize(
   object.dateOfBirth = reader.readDateTimeOrNull(offsets[4]);
   object.farmId = reader.readStringOrNull(offsets[5]);
   object.id = id;
-  object.name = reader.readString(offsets[6]);
-  object.notes = reader.readStringOrNull(offsets[7]);
-  object.photoPath = reader.readStringOrNull(offsets[8]);
+  object.notes = reader.readStringOrNull(offsets[6]);
+  object.photoPath = reader.readStringOrNull(offsets[7]);
   object.sex =
-      _CowsexValueEnumMap[reader.readByteOrNull(offsets[9])] ?? CowSex.female;
-  object.source = reader.readStringOrNull(offsets[10]);
-  object.status = _CowstatusValueEnumMap[reader.readByteOrNull(offsets[11])] ??
+      _CowsexValueEnumMap[reader.readByteOrNull(offsets[8])] ?? CowSex.female;
+  object.source = reader.readStringOrNull(offsets[9]);
+  object.status = _CowstatusValueEnumMap[reader.readByteOrNull(offsets[10])] ??
       CowStatus.active;
   object.syncStatus =
-      _CowsyncStatusValueEnumMap[reader.readByteOrNull(offsets[12])] ??
+      _CowsyncStatusValueEnumMap[reader.readByteOrNull(offsets[11])] ??
           SyncStatus.pending;
-  object.tagNumber = reader.readStringOrNull(offsets[13]);
-  object.updatedAt = reader.readDateTime(offsets[14]);
+  object.tagNumber = reader.readString(offsets[12]);
+  object.updatedAt = reader.readDateTime(offsets[13]);
   return object;
 }
 
@@ -230,25 +217,23 @@ P _cowDeserializeProp<P>(
     case 5:
       return (reader.readStringOrNull(offset)) as P;
     case 6:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 7:
       return (reader.readStringOrNull(offset)) as P;
     case 8:
-      return (reader.readStringOrNull(offset)) as P;
-    case 9:
       return (_CowsexValueEnumMap[reader.readByteOrNull(offset)] ??
           CowSex.female) as P;
-    case 10:
+    case 9:
       return (reader.readStringOrNull(offset)) as P;
-    case 11:
+    case 10:
       return (_CowstatusValueEnumMap[reader.readByteOrNull(offset)] ??
           CowStatus.active) as P;
-    case 12:
+    case 11:
       return (_CowsyncStatusValueEnumMap[reader.readByteOrNull(offset)] ??
           SyncStatus.pending) as P;
+    case 12:
+      return (reader.readString(offset)) as P;
     case 13:
-      return (reader.readStringOrNull(offset)) as P;
-    case 14:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1017,134 +1002,6 @@ extension CowQueryFilter on QueryBuilder<Cow, Cow, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        include: include,
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameLessThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.lessThan(
-        include: include,
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameBetween(
-    String lower,
-    String upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.between(
-        property: r'name',
-        lower: lower,
-        includeLower: includeLower,
-        upper: upper,
-        includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameContains(String value,
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'name',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameMatches(String pattern,
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'name',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'name',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> nameIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'name',
-        value: '',
-      ));
-    });
-  }
-
   QueryBuilder<Cow, Cow, QAfterFilterCondition> notesIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1734,24 +1591,8 @@ extension CowQueryFilter on QueryBuilder<Cow, Cow, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> tagNumberIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'tagNumber',
-      ));
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterFilterCondition> tagNumberIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'tagNumber',
-      ));
-    });
-  }
-
   QueryBuilder<Cow, Cow, QAfterFilterCondition> tagNumberEqualTo(
-    String? value, {
+    String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
@@ -1764,7 +1605,7 @@ extension CowQueryFilter on QueryBuilder<Cow, Cow, QFilterCondition> {
   }
 
   QueryBuilder<Cow, Cow, QAfterFilterCondition> tagNumberGreaterThan(
-    String? value, {
+    String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -1779,7 +1620,7 @@ extension CowQueryFilter on QueryBuilder<Cow, Cow, QFilterCondition> {
   }
 
   QueryBuilder<Cow, Cow, QAfterFilterCondition> tagNumberLessThan(
-    String? value, {
+    String value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
@@ -1794,8 +1635,8 @@ extension CowQueryFilter on QueryBuilder<Cow, Cow, QFilterCondition> {
   }
 
   QueryBuilder<Cow, Cow, QAfterFilterCondition> tagNumberBetween(
-    String? lower,
-    String? upper, {
+    String lower,
+    String upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
@@ -2009,18 +1850,6 @@ extension CowQuerySortBy on QueryBuilder<Cow, Cow, QSortBy> {
     });
   }
 
-  QueryBuilder<Cow, Cow, QAfterSortBy> sortByName() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'name', Sort.asc);
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterSortBy> sortByNameDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'name', Sort.desc);
-    });
-  }
-
   QueryBuilder<Cow, Cow, QAfterSortBy> sortByNotes() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'notes', Sort.asc);
@@ -2203,18 +2032,6 @@ extension CowQuerySortThenBy on QueryBuilder<Cow, Cow, QSortThenBy> {
     });
   }
 
-  QueryBuilder<Cow, Cow, QAfterSortBy> thenByName() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'name', Sort.asc);
-    });
-  }
-
-  QueryBuilder<Cow, Cow, QAfterSortBy> thenByNameDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'name', Sort.desc);
-    });
-  }
-
   QueryBuilder<Cow, Cow, QAfterSortBy> thenByNotes() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'notes', Sort.asc);
@@ -2352,13 +2169,6 @@ extension CowQueryWhereDistinct on QueryBuilder<Cow, Cow, QDistinct> {
     });
   }
 
-  QueryBuilder<Cow, Cow, QDistinct> distinctByName(
-      {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
-    });
-  }
-
   QueryBuilder<Cow, Cow, QDistinct> distinctByNotes(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2455,12 +2265,6 @@ extension CowQueryProperty on QueryBuilder<Cow, Cow, QQueryProperty> {
     });
   }
 
-  QueryBuilder<Cow, String, QQueryOperations> nameProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'name');
-    });
-  }
-
   QueryBuilder<Cow, String?, QQueryOperations> notesProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'notes');
@@ -2497,7 +2301,7 @@ extension CowQueryProperty on QueryBuilder<Cow, Cow, QQueryProperty> {
     });
   }
 
-  QueryBuilder<Cow, String?, QQueryOperations> tagNumberProperty() {
+  QueryBuilder<Cow, String, QQueryOperations> tagNumberProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'tagNumber');
     });

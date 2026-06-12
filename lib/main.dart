@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'models/cow.dart';
+import 'screens/add_cow_screen.dart';
 
 late Isar isar;
 
@@ -9,10 +10,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final dir = await getApplicationDocumentsDirectory();
-  isar = await Isar.open(
-    [CowSchema],
-    directory: dir.path,
-  );
+  isar = await Isar.open([CowSchema], directory: dir.path);
 
   runApp(const FarmApp());
 }
@@ -46,6 +44,18 @@ class HomeScreen extends StatelessWidget {
           'Farm App Starting Point 🐄',
           style: TextStyle(fontSize: 18),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final saved = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (context) => const AddCowScreen()),
+          );
+          if (saved == true) {
+            // We'll use this in the next step to refresh a cow list
+          }
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

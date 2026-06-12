@@ -25,8 +25,8 @@ class Cow {
   Id id = Isar.autoIncrement;
 
   // Identification
-  String? tagNumber;
-  String name = '';
+  String tagNumber = '';
+  
 
   // Breed — simple string for now, dropdown-driven
   String breed = 'Unknown';
@@ -58,8 +58,5 @@ class Cow {
   // Sync tracking (used later)
   @enumerated
   SyncStatus syncStatus = SyncStatus.pending;
-
-  // Convenience getter
-  @ignore
-  bool get isTagged => tagNumber != null && tagNumber!.isNotEmpty;
+  
 }
