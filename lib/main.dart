@@ -1,6 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:isar/isar.dart';
+import 'package:path_provider/path_provider.dart';
+import 'models/cow.dart';
 
-void main() {
+late Isar isar;
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final dir = await getApplicationDocumentsDirectory();
+  isar = await Isar.open(
+    [CowSchema],
+    directory: dir.path,
+  );
+
   runApp(const FarmApp());
 }
 
@@ -27,9 +40,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Farm Manager'),
-      ),
+      appBar: AppBar(title: const Text('Farm Manager')),
       body: const Center(
         child: Text(
           'Farm App Starting Point 🐄',
