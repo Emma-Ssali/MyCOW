@@ -34,7 +34,10 @@ class _CowListScreenState extends State<CowListScreen> {
   Future<void> _loadCows() async {
     setState(() => _loading = true);
 
-    final cows = await isar.cows.where().sortByUpdatedAtDesc().findAll();
+    final cows = await isar.cows
+        .where()
+        .sortByUpdatedAtDesc()
+        .findAll();
 
     setState(() {
       _cows = cows;
@@ -119,7 +122,7 @@ class _CowListScreenState extends State<CowListScreen> {
                 )
               // 3. We have cows — display them in a scrollable list.
               : RefreshIndicator(
-                  // Lets the user pull-down to reload the list from the database.
+                  // Pull-down to reload the list from the database.
                   onRefresh: _loadCows,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(12),
@@ -130,13 +133,20 @@ class _CowListScreenState extends State<CowListScreen> {
                         margin: const EdgeInsets.only(bottom: 10),
                         child: ListTile(
                           // Tap to open the cow's full detail screen.
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            final updated = await Navigator.push<bool>(
                               context,
-                              MaterialPageRoute(builder: (context) => CowDetailScreen(cow: cow)),
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    CowDetailScreen(cow: cow),
+                              ),
                             );
+                            // Reload list if the cow was edited or deleted.
+                            if (updated == true) {
+                              _loadCows();
+                            }
                           },
-                          
+
                           // Circular avatar showing the first letter of the
                           // tag number, colored by the cow's status.
                           leading: CircleAvatar(
@@ -144,16 +154,20 @@ class _CowListScreenState extends State<CowListScreen> {
                                 _statusColor(cow.status).withValues(alpha: 0.15),
                             child: Text(
                               cow.tagNumber.isNotEmpty
-                                  ? cow.tagNumber.substring(0, 1).toUpperCase()
+                                  ? cow.tagNumber
+                                      .substring(0, 1)
+                                      .toUpperCase()
                                   : '?',
-                              style: TextStyle(color: _statusColor(cow.status)),
+                              style:
+                                  TextStyle(color: _statusColor(cow.status)),
                             ),
                           ),
 
                           // Main title: the cow's tag number.
                           title: Text(
                             'Tag: ${cow.tagNumber}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold),
                           ),
 
                           // Subtitle: breed, sex, status, and acquisition date.
@@ -166,7 +180,10 @@ class _CowListScreenState extends State<CowListScreen> {
 
                           // Delete button on the right of each row.
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                            ),
                             onPressed: () => _deleteCow(cow),
                           ),
                         ),
