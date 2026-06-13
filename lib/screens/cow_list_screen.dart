@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 import '../main.dart';
 import '../models/cow.dart';
 import 'add_cow_screen.dart';
+import 'cow_detail_screen.dart';
 
 /// Displays the list of all cows stored in the local Isar database.
 /// This is the home screen of the app — users can view, add, and
@@ -128,6 +129,14 @@ class _CowListScreenState extends State<CowListScreen> {
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
                         child: ListTile(
+                          // Tap to open the cow's full detail screen.
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => CowDetailScreen(cow: cow)),
+                            );
+                          },
+                          
                           // Circular avatar showing the first letter of the
                           // tag number, colored by the cow's status.
                           leading: CircleAvatar(
