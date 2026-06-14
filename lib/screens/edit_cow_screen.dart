@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 import '../main.dart';
 import '../models/cow.dart';
 import '../constants/breeds.dart';
+import '../widgets/cow_photo_picker.dart';
 
 /// Edit screen — pre-fills all fields with the existing cow's data.
 /// On save, updates the record in Isar using the same id.
@@ -29,6 +30,9 @@ class _EditCowScreenState extends State<EditCowScreen> {
   late DateTime? _dateOfBirth;
   late DateTime _acquisitionDate;
 
+  // Holds the local file path of the selected photo, if any.
+  late String? _photoPath;
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +56,7 @@ class _EditCowScreenState extends State<EditCowScreen> {
     _selectedStatus = widget.cow.status;
     _dateOfBirth = widget.cow.dateOfBirth;
     _acquisitionDate = widget.cow.acquisitionDate;
+    _photoPath = widget.cow.photoPath;
   }
 
   @override
@@ -93,6 +98,7 @@ class _EditCowScreenState extends State<EditCowScreen> {
     final cow = widget.cow
       ..tagNumber = _tagController.text.trim()
       ..breed = breedValue.isEmpty ? 'Unknown' : breedValue
+      ..photoPath = _photoPath
       ..sex = _selectedSex
       ..status = _selectedStatus
       ..dateOfBirth = _dateOfBirth
@@ -111,8 +117,6 @@ class _EditCowScreenState extends State<EditCowScreen> {
     });
 
     if (mounted) {
-      // Pop twice: return true signals both the edit screen
-      // and the detail screen to refresh.
       Navigator.pop(context, true);
     }
   }
@@ -131,6 +135,13 @@ class _EditCowScreenState extends State<EditCowScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Photo picker — pre-filled with the cow's existing photo, if any.
+            CowPhotoPicker(
+              initialPhotoPath: _photoPath,
+              onPhotoChanged: (path) => _photoPath = path,
+            ),
+            const SizedBox(height: 20),
+
             // Tag number — required.
             TextFormField(
               controller: _tagController,
@@ -150,7 +161,7 @@ class _EditCowScreenState extends State<EditCowScreen> {
 
             // Breed dropdown.
             DropdownButtonFormField<String>(
-              value: _selectedBreed,
+              initialValue: _selectedBreed,
               decoration: const InputDecoration(
                 labelText: 'Breed',
                 border: OutlineInputBorder(),
@@ -185,7 +196,7 @@ class _EditCowScreenState extends State<EditCowScreen> {
 
             // Sex dropdown.
             DropdownButtonFormField<CowSex>(
-              value: _selectedSex,
+              initialValue: _selectedSex,
               decoration: const InputDecoration(
                 labelText: 'Sex',
                 border: OutlineInputBorder(),
@@ -204,7 +215,7 @@ class _EditCowScreenState extends State<EditCowScreen> {
 
             // Status dropdown.
             DropdownButtonFormField<CowStatus>(
-              value: _selectedStatus,
+              initialValue: _selectedStatus,
               decoration: const InputDecoration(
                 labelText: 'Status',
                 border: OutlineInputBorder(),

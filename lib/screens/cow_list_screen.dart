@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import '../main.dart';
@@ -330,19 +331,27 @@ class _CowListScreenState extends State<CowListScreen> {
                                       _loadCows();
                                     }
                                   },
+
+                                  // Photo if available, otherwise initial letter.
                                   leading: CircleAvatar(
                                     backgroundColor: _statusColor(cow.status)
                                         .withValues(alpha: 0.15),
-                                    child: Text(
-                                      cow.tagNumber.isNotEmpty
-                                          ? cow.tagNumber
-                                              .substring(0, 1)
-                                              .toUpperCase()
-                                          : '?',
-                                      style: TextStyle(
-                                          color: _statusColor(cow.status)),
-                                    ),
+                                    backgroundImage: cow.photoPath != null
+                                        ? FileImage(File(cow.photoPath!))
+                                        : null,
+                                    child: cow.photoPath == null
+                                        ? Text(
+                                            cow.tagNumber.isNotEmpty
+                                                ? cow.tagNumber
+                                                    .substring(0, 1)
+                                                    .toUpperCase()
+                                                : '?',
+                                            style: TextStyle(
+                                                color: _statusColor(cow.status)),
+                                          )
+                                        : null,
                                   ),
+
                                   title: Text(
                                     'Tag: ${cow.tagNumber}',
                                     style: const TextStyle(

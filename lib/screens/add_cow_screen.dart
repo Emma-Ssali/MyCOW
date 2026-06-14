@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import '../models/cow.dart';
 import '../constants/breeds.dart';
+import '../widgets/cow_photo_picker.dart';
 
 class AddCowScreen extends StatefulWidget {
   const AddCowScreen({super.key});
@@ -23,6 +24,9 @@ class _AddCowScreenState extends State<AddCowScreen> {
   CowStatus _selectedStatus = CowStatus.active;
   DateTime? _dateOfBirth;
   DateTime _acquisitionDate = DateTime.now();
+
+  // Holds the local file path of the selected photo, if any.
+  String? _photoPath;
 
   @override
   void dispose() {
@@ -61,6 +65,7 @@ class _AddCowScreenState extends State<AddCowScreen> {
     final cow = Cow()
       ..tagNumber = _tagController.text.trim()
       ..breed = breedValue.isEmpty ? 'Unknown' : breedValue
+      ..photoPath = _photoPath
       ..sex = _selectedSex
       ..status = _selectedStatus
       ..dateOfBirth = _dateOfBirth
@@ -97,6 +102,13 @@ class _AddCowScreenState extends State<AddCowScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Photo picker — tap to take a photo or choose from gallery.
+            CowPhotoPicker(
+              initialPhotoPath: _photoPath,
+              onPhotoChanged: (path) => _photoPath = path,
+            ),
+            const SizedBox(height: 20),
+
             TextFormField(
               controller: _tagController,
               decoration: const InputDecoration(

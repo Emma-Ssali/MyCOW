@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/cow.dart';
 import 'edit_cow_screen.dart';
@@ -83,7 +84,22 @@ class CowDetailScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Status badge at the top — quick visual summary.
+          // Cow photo, or placeholder icon if none set.
+          Center(
+            child: CircleAvatar(
+              radius: 70,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: cow.photoPath != null
+                  ? FileImage(File(cow.photoPath!))
+                  : null,
+              child: cow.photoPath == null
+                  ? const Icon(Icons.photo_camera, size: 40, color: Colors.grey)
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Status badge.
           Center(
             child: Chip(
               label: Text(
