@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'models/cow.dart';
 import 'screens/cow_list_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 late Isar isar;
 
@@ -10,7 +11,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final dir = await getApplicationDocumentsDirectory();
-  isar = await Isar.open([CowSchema], directory: dir.path);
+  isar = await Isar.open(
+    [CowSchema],
+    directory: dir.path,
+  );
 
   runApp(const FarmApp());
 }
@@ -27,36 +31,49 @@ class FarmApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: const CowListScreen(),
+      home: const MainNavigation(),
     );
   }
 }
 
-///  class HomeScreen extends StatelessWidget {
-///    const HomeScreen({super.key});
-///  
-///    @override
-///    Widget build(BuildContext context) {
-///      return Scaffold(
-///        appBar: AppBar(title: const Text('Farm Manager')),
-///        body: const Center(
-///          child: Text(
-///            'Farm App Starting Point 🐄',
-///            style: TextStyle(fontSize: 18),
-///          ),
-///        ),
-///        floatingActionButton: FloatingActionButton(
-///          onPressed: () async {
-///            final saved = await Navigator.push<bool>(
-///              context,
-///              MaterialPageRoute(builder: (context) => const AddCowScreen()),
-///            );
-///            if (saved == true) {
-///              // We'll use this in the next step to refresh a cow list
-///            }
-///          },
-///          child: const Icon(Icons.add),
-///        ),
-///      );
-///    }
-///  }
+/// Bottom navigation shell — switches between Dashboard and Cow List.
+class MainNavigation extends StatefulWidget {
+  const MainNavigation({super.key});
+
+  @override
+  State<MainNavigation> createState() => _MainNavigationState();
+}
+
+class _MainNavigationState extends State<MainNavigation> {
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = const [
+    DashboardScreen(),
+    CowListScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_currentIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.pets_outlined),
+            selectedIcon: Icon(Icons.pets),
+            label: 'My Cows',
+          ),
+        ],
+      ),
+    );
+  }
+}
