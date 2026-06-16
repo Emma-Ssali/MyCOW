@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'models/cow.dart';
 import 'screens/cow_list_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'models/transaction.dart';
 
 late Isar isar;
 
@@ -12,7 +13,7 @@ void main() async {
 
   final dir = await getApplicationDocumentsDirectory();
   isar = await Isar.open(
-    [CowSchema],
+    [CowSchema, FarmTransactionSchema],
     directory: dir.path,
   );
 
