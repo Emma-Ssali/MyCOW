@@ -5,6 +5,7 @@ import 'models/cow.dart';
 import 'screens/cow_list_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'models/transaction.dart';
+import 'screens/finance_screen.dart';
 
 late Isar isar;
 
@@ -51,6 +52,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = const [
     DashboardScreen(),
     CowListScreen(),
+    FinanceScreen(),
   ];
 
   @override
@@ -72,6 +74,11 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.pets_outlined),
             selectedIcon: Icon(Icons.pets),
             label: 'My Cows',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            selectedIcon: Icon(Icons.account_balance_wallet),
+            label: 'Finance',
           ),
         ],
       ),
