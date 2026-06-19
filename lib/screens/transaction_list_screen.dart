@@ -5,6 +5,7 @@ import '../models/transaction.dart';
 import '../models/cow.dart';
 import 'add_transaction_screen.dart';
 import 'edit_transaction_screen.dart';
+import 'financial_dashboard_screen.dart';
 
 /// Displays all recorded transactions with filtering by type and category.
 class TransactionListScreen extends StatefulWidget {
@@ -17,10 +18,9 @@ class TransactionListScreen extends StatefulWidget {
 class _TransactionListScreenState extends State<TransactionListScreen> {
   List<FarmTransaction> _allTransactions = [];
   List<FarmTransaction> _filteredTransactions = [];
-  Map<int, Cow> _cowMap = {}; // cowId → Cow, for displaying linked cow tags.
+  Map<int, Cow> _cowMap = {};
   bool _loading = true;
 
-  // Filter state — null means show all types.
   TransactionType? _typeFilter;
   String? _categoryFilter;
 
@@ -30,7 +30,7 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
     _loadData();
   }
 
-  /// Loads all transactions and all cows (for tag lookups) from Isar.
+  /// Loads all transactions and cows from Isar.
   Future<void> _loadData() async {
     setState(() => _loading = true);
 
@@ -113,14 +113,14 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
   String _formatDate(DateTime date) =>
       '${date.day}/${date.month}/${date.year}';
 
-  /// Returns the unique categories currently present in all transactions.
+  /// Returns unique categories present in all transactions.
   List<String> get _availableCategories {
-    final cats = _allTransactions.map((tx) => tx.category).toSet().toList();
+    final cats =
+        _allTransactions.map((tx) => tx.category).toSet().toList();
     cats.sort();
     return cats;
   }
 
-  /// Totals for the currently filtered transactions.
   double get _filteredIncome => _filteredTransactions
       .where((tx) => tx.type == TransactionType.income)
       .fold(0, (sum, tx) => sum + tx.amountUgx);
@@ -131,18 +131,35 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtersActive = _typeFilter != null || _categoryFilter != null;
+    final filtersActive =
+        _typeFilter != null || _categoryFilter != null;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transactions'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
+          // Chart icon — navigates to financial dashboard.
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Financial Dashboard',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const FinancialDashboardScreen(),
+                ),
+              );
+            },
+          ),
+          // Total count label.
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
               child: Text(
                 '${_allTransactions.length} total',
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                style:
+                    const TextStyle(fontSize: 13, color: Colors.grey),
               ),
             ),
           ),
@@ -158,27 +175,35 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
                   padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
                   child: Row(
                     children: [
-                      // Type filter chips.
+                      // Income filter chip.
                       FilterChip(
                         label: const Text('Income'),
-                        selected: _typeFilter == TransactionType.income,
-                        selectedColor: Colors.green.withValues(alpha: 0.2),
+                        selected:
+                            _typeFilter == TransactionType.income,
+                        selectedColor:
+                            Colors.green.withValues(alpha: 0.2),
                         checkmarkColor: Colors.green,
                         onSelected: (selected) {
-                          setState(() => _typeFilter =
-                              selected ? TransactionType.income : null);
+                          setState(() => _typeFilter = selected
+                              ? TransactionType.income
+                              : null);
                           _applyFilters();
                         },
                       ),
                       const SizedBox(width: 6),
+
+                      // Expense filter chip.
                       FilterChip(
                         label: const Text('Expense'),
-                        selected: _typeFilter == TransactionType.expense,
-                        selectedColor: Colors.red.withValues(alpha: 0.2),
+                        selected:
+                            _typeFilter == TransactionType.expense,
+                        selectedColor:
+                            Colors.red.withValues(alpha: 0.2),
                         checkmarkColor: Colors.red,
                         onSelected: (selected) {
-                          setState(() => _typeFilter =
-                              selected ? TransactionType.expense : null);
+                          setState(() => _typeFilter = selected
+                              ? TransactionType.expense
+                              : null);
                           _applyFilters();
                         },
                       ),
@@ -186,22 +211,27 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
 
                       // Divider.
                       Container(
-                          width: 1, height: 24, color: Colors.grey.shade300),
+                        width: 1,
+                        height: 24,
+                        color: Colors.grey.shade300,
+                      ),
                       const SizedBox(width: 12),
 
-                      // Category filter chips — only for categories that exist.
-                      ..._availableCategories.map((cat) => Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: FilterChip(
-                              label: Text(cat),
-                              selected: _categoryFilter == cat,
-                              onSelected: (selected) {
-                                setState(() =>
-                                    _categoryFilter = selected ? cat : null);
-                                _applyFilters();
-                              },
-                            ),
-                          )),
+                      // Category filter chips.
+                      ..._availableCategories.map(
+                        (cat) => Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: FilterChip(
+                            label: Text(cat),
+                            selected: _categoryFilter == cat,
+                            onSelected: (selected) {
+                              setState(() => _categoryFilter =
+                                  selected ? cat : null);
+                              _applyFilters();
+                            },
+                          ),
+                        ),
+                      ),
 
                       // Clear filters button.
                       if (filtersActive) ...[
@@ -216,10 +246,11 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
                   ),
                 ),
 
-                // Summary bar — totals for filtered transactions.
+                // Summary bar.
                 if (_filteredTransactions.isNotEmpty)
                   Container(
-                    margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    margin:
+                        const EdgeInsets.fromLTRB(12, 0, 12, 8),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
@@ -229,15 +260,18 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
                       children: [
                         // Income total.
                         Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
                           children: [
                             const Text('Income',
                                 style: TextStyle(
-                                    fontSize: 11, color: Colors.grey)),
+                                    fontSize: 11,
+                                    color: Colors.grey)),
                             Text(
                               _formatAmount(_filteredIncome),
                               style: const TextStyle(
@@ -250,11 +284,13 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
 
                         // Expense total.
                         Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.center,
                           children: [
                             const Text('Expenses',
                                 style: TextStyle(
-                                    fontSize: 11, color: Colors.grey)),
+                                    fontSize: 11,
+                                    color: Colors.grey)),
                             Text(
                               _formatAmount(_filteredExpense),
                               style: const TextStyle(
@@ -271,14 +307,17 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
                           children: [
                             const Text('Net',
                                 style: TextStyle(
-                                    fontSize: 11, color: Colors.grey)),
+                                    fontSize: 11,
+                                    color: Colors.grey)),
                             Text(
                               _formatAmount(
                                   _filteredIncome - _filteredExpense),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: _filteredIncome - _filteredExpense >= 0
+                                color: _filteredIncome -
+                                            _filteredExpense >=
+                                        0
                                     ? Colors.green
                                     : Colors.red,
                               ),
@@ -305,11 +344,12 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
                       : RefreshIndicator(
                           onRefresh: _loadData,
                           child: ListView.builder(
-                            padding:
-                                const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                            padding: const EdgeInsets.fromLTRB(
+                                12, 0, 12, 12),
                             itemCount: _filteredTransactions.length,
                             itemBuilder: (context, index) {
-                              final tx = _filteredTransactions[index];
+                              final tx =
+                                  _filteredTransactions[index];
                               final linkedCow = tx.cowId != null
                                   ? _cowMap[tx.cowId]
                                   : null;
@@ -317,7 +357,8 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
                                   tx.type == TransactionType.income;
 
                               return Card(
-                                margin: const EdgeInsets.only(bottom: 10),
+                                margin: const EdgeInsets.only(
+                                    bottom: 10),
                                 child: ListTile(
                                   // Tap to edit.
                                   onTap: () async {
@@ -336,8 +377,10 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
                                   // Icon indicating income or expense.
                                   leading: CircleAvatar(
                                     backgroundColor: isIncome
-                                        ? Colors.green.withValues(alpha: 0.15)
-                                        : Colors.red.withValues(alpha: 0.15),
+                                        ? Colors.green
+                                            .withValues(alpha: 0.15)
+                                        : Colors.red
+                                            .withValues(alpha: 0.15),
                                     child: Icon(
                                       isIncome
                                           ? Icons.arrow_downward
@@ -373,7 +416,8 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
                                       Text(
                                         _formatDate(tx.date),
                                         style: const TextStyle(
-                                            fontSize: 12, color: Colors.grey),
+                                            fontSize: 12,
+                                            color: Colors.grey),
                                       ),
                                     ],
                                   ),
@@ -381,8 +425,10 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
 
                                   // Amount + delete button.
                                   trailing: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.end,
                                     children: [
                                       Text(
                                         '${isIncome ? '+' : '-'}${_formatAmount(tx.amountUgx)}',
@@ -395,7 +441,8 @@ class _TransactionListScreenState extends State<TransactionListScreen> {
                                         ),
                                       ),
                                       GestureDetector(
-                                        onTap: () => _deleteTransaction(tx),
+                                        onTap: () =>
+                                            _deleteTransaction(tx),
                                         child: const Icon(
                                           Icons.delete_outline,
                                           color: Colors.red,
