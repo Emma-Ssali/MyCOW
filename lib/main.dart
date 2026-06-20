@@ -7,6 +7,7 @@ import 'models/health_record.dart';
 import 'screens/cow_list_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/finance_screen.dart';
+import 'screens/health_dashboard_screen.dart';
 
 late Isar isar;
 
@@ -54,6 +55,7 @@ class _MainNavigationState extends State<MainNavigation> {
     DashboardScreen(),
     CowListScreen(),
     FinanceScreen(),
+    HealthDashboardScreen(),
   ];
 
   @override
@@ -80,6 +82,11 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet),
             label: 'Finance',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.health_and_safety_outlined),
+            selectedIcon: Icon(Icons.health_and_safety),
+            label: 'Health',
           ),
         ],
       ),
