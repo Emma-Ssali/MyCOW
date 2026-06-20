@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'models/cow.dart';
+import 'models/transaction.dart';
+import 'models/health_record.dart';
 import 'screens/cow_list_screen.dart';
 import 'screens/dashboard_screen.dart';
-import 'models/transaction.dart';
 import 'screens/finance_screen.dart';
 
 late Isar isar;
@@ -14,7 +15,7 @@ void main() async {
 
   final dir = await getApplicationDocumentsDirectory();
   isar = await Isar.open(
-    [CowSchema, FarmTransactionSchema],
+    [CowSchema, FarmTransactionSchema, HealthRecordSchema],
     directory: dir.path,
   );
 
@@ -38,7 +39,7 @@ class FarmApp extends StatelessWidget {
   }
 }
 
-/// Bottom navigation shell — switches between Dashboard and Cow List.
+/// Bottom navigation shell — switches between Dashboard, Cows and Finance.
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
