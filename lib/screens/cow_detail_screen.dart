@@ -5,9 +5,10 @@ import '../models/cow.dart';
 import '../models/transaction.dart';
 import '../main.dart';
 import 'edit_cow_screen.dart';
+import 'health_records_screen.dart';
 
 /// Displays the full details of a single cow, including
-/// all financial transactions linked to this cow.
+/// all financial transactions and health records linked to this cow.
 class CowDetailScreen extends StatefulWidget {
   final Cow cow;
 
@@ -124,12 +125,11 @@ class _CowDetailScreenState extends State<CowDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(tx.category,
-                    style:
-                        const TextStyle(fontWeight: FontWeight.w500)),
+                    style: const TextStyle(fontWeight: FontWeight.w500)),
                 Text(
                   _formatDate(tx.date),
-                  style: const TextStyle(
-                      fontSize: 12, color: Colors.grey),
+                  style:
+                      const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
@@ -258,6 +258,27 @@ class _CowDetailScreenState extends State<CowDetailScreen> {
 
           const SizedBox(height: 20),
 
+          // Health records button.
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HealthRecordsScreen(
+                    cowId: cow.id,
+                    cowTag: cow.tagNumber,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.health_and_safety),
+            label: const Text('View Health Records'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 44),
+            ),
+          ),
+          const SizedBox(height: 20),
+
           // Financial history section.
           const Text('Financial History',
               style:
@@ -342,8 +363,7 @@ class _CowDetailScreenState extends State<CowDetailScreen> {
           const Divider(),
           _detailRow('Created', _formatDate(cow.createdAt)),
           _detailRow('Last Updated', _formatDate(cow.updatedAt)),
-          _detailRow(
-              'Sync Status', _capitalize(cow.syncStatus.name)),
+          _detailRow('Sync Status', _capitalize(cow.syncStatus.name)),
         ],
       ),
     );
