@@ -6,6 +6,7 @@ import '../models/transaction.dart';
 import '../main.dart';
 import 'edit_cow_screen.dart';
 import 'health_records_screen.dart';
+import 'breeding_records_screen.dart';
 
 /// Displays the full details of a single cow, including
 /// all financial transactions and health records linked to this cow.
@@ -273,6 +274,27 @@ class _CowDetailScreenState extends State<CowDetailScreen> {
             },
             icon: const Icon(Icons.health_and_safety),
             label: const Text('View Health Records'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 44),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Breeding records button.
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BreedingRecordsScreen(
+                    cowId: cow.id,
+                    cowTag: cow.tagNumber,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.favorite),
+            label: const Text('View Breeding Records'),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 44),
             ),
