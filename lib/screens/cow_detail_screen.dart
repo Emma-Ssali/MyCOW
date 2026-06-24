@@ -8,6 +8,7 @@ import 'edit_cow_screen.dart';
 import 'health_records_screen.dart';
 import 'breeding_records_screen.dart';
 import 'milk_production_screen.dart';
+import 'weight_records_screen.dart';
 
 /// Displays the full details of a single cow, including
 /// all financial transactions and health records linked to this cow.
@@ -300,10 +301,9 @@ class _CowDetailScreenState extends State<CowDetailScreen> {
               minimumSize: const Size(double.infinity, 44),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
 
           // Milk production records button.
-          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () {
               Navigator.push(
@@ -322,6 +322,28 @@ class _CowDetailScreenState extends State<CowDetailScreen> {
               minimumSize: const Size(double.infinity, 44),
             ),
           ),
+          const SizedBox(height: 8),
+
+          // Weight records button.
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WeightRecordsScreen(
+                    cowId: cow.id,
+                    cowTag: cow.tagNumber,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.monitor_weight),
+            label: const Text('View Weight Records'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 44),
+            ),
+          ),
+          const SizedBox(height: 8),
 
           // Financial history section.
           const Text('Financial History',
