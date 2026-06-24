@@ -7,6 +7,7 @@ import '../main.dart';
 import 'edit_cow_screen.dart';
 import 'health_records_screen.dart';
 import 'breeding_records_screen.dart';
+import 'milk_production_screen.dart';
 
 /// Displays the full details of a single cow, including
 /// all financial transactions and health records linked to this cow.
@@ -300,6 +301,27 @@ class _CowDetailScreenState extends State<CowDetailScreen> {
             ),
           ),
           const SizedBox(height: 20),
+
+          // Milk production records button.
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MilkProductionScreen(
+                    cowId: cow.id,
+                    cowTag: cow.tagNumber,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.water_drop),
+            label: const Text('View Milk Production'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 44),
+            ),
+          ),
 
           // Financial history section.
           const Text('Financial History',
