@@ -9,6 +9,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/finance_screen.dart';
 import 'screens/health_dashboard_screen.dart';
 import 'models/breeding_record.dart';
+import 'models/milk_production.dart';
 
 late Isar isar;
 
@@ -17,7 +18,7 @@ void main() async {
 
   final dir = await getApplicationDocumentsDirectory();
   isar = await Isar.open(
-    [CowSchema, FarmTransactionSchema, HealthRecordSchema, BreedingRecordSchema],
+    [CowSchema, FarmTransactionSchema, HealthRecordSchema, BreedingRecordSchema, MilkProductionSchema],
     directory: dir.path,
   );
 
