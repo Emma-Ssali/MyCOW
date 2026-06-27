@@ -13,6 +13,7 @@ import 'screens/health_dashboard_screen.dart';
 import 'models/breeding_record.dart';
 import 'models/milk_production.dart';
 import 'models/weight_record.dart';
+import 'services/sync_service.dart';
 
 late Isar isar;
 
@@ -36,6 +37,9 @@ void main() async {
     ],
     directory: dir.path,
   );
+
+  // Start background sync after app initializes.
+  SyncService().sync();
 
   runApp(const FarmApp());
 }
