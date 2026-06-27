@@ -1,3 +1,5 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'config/supabase_config.dart';
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,6 +18,12 @@ late Isar isar;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Supabase.
+  await Supabase.initialize(
+    url: SupabaseConfig.projectUrl,
+    anonKey: SupabaseConfig.publishableKey,
+  );
 
   final dir = await getApplicationDocumentsDirectory();
   isar = await Isar.open(
