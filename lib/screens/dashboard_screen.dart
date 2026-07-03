@@ -167,114 +167,144 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final breedCounts = _breedCounts();
 
     return Scaffold(
-  appBar: AppBar(
-    title: const Text('Dashboard'),
-    actions: [
-      IconButton(
-        icon: const Icon(Icons.person_outline),
-        tooltip: 'Account',
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Account'),
-              content: Text(
-                Supabase.instance.client.auth.currentUser?.email ??
-                    'Unknown',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    await Supabase.instance.client.auth.signOut();
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  child: const Text(
-                    'Sign Out',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-              ],
+      appBar: AppBar(
+      title: const Text('Dashboard'),
+      actions: [
+        // Show user's name next to the icon.
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Text(
+              Supabase.instance.client.auth.currentUser
+                      ?.userMetadata?['full_name'] ??
+                  '',
+              style: const TextStyle(fontSize: 13),
             ),
-          );
-        },
-      ),
-    ],
-  ),
-  body: _loading
-      ? const Center(child: CircularProgressIndicator())
-      : RefreshIndicator(
-          onRefresh: _loadData,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Top summary cards: total, tagged, untagged.
-              Row(
-                children: [
-                  _statCard('Total Cows', '$total'),
-                  const SizedBox(width: 10),
-                  _statCard('Tagged', '$tagged', color: Colors.green),
-                  const SizedBox(width: 10),
-                  _statCard('Untagged', '$untagged', color: Colors.orange),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Status breakdown.
-              const Text(
-                'Status Breakdown',
-                style:
-                    TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const Divider(),
-              if (total == 0)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No cows recorded yet.',
-                      style: TextStyle(color: Colors.grey)),
-                )
-              else
-                ...CowStatus.values.map(
-                  (status) =>
-                      _statusBar(status, statusCounts[status] ?? 0, total),
-                ),
-
-              const SizedBox(height: 24),
-
-              // Breed breakdown.
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Breed Breakdown',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    '${breedCounts.length} breed${breedCounts.length == 1 ? '' : 's'}',
-                    style: const TextStyle(
-                        fontSize: 13, color: Colors.grey),
-                  ),
-                ],
-              ),
-              const Divider(),
-              if (breedCounts.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No cows recorded yet.',
-                      style: TextStyle(color: Colors.grey)),
-                )
-              else
-                ...breedCounts.map(
-                  (entry) =>
-                      _breedRow(entry.key, entry.value, total),
-                ),
-            ],
           ),
         ),
+        IconButton(
+          icon: const Icon(Icons.person_outline),
+          tooltip: 'Account',
+          onPressed: () {
+            final user = Supabase.instance.client.auth.currentUser;
+            final name = user?.userMetadata?['full_name'] ?? 'Unknown';
+            final email = user?.email ?? 'Unknown';
+
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Account'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      email,
+                      style: const TextStyle(
+                          fontSize: 13, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await Supabase.instance.client.auth.signOut();
+                    },
+                    child: const Text(
+                      'Sign Out',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+    body: _loading
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
+            onRefresh: _loadData,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Top summary cards: total, tagged, untagged.
+                Row(
+                  children: [
+                    _statCard('Total Cows', '$total'),
+                    const SizedBox(width: 10),
+                    _statCard('Tagged', '$tagged', color: Colors.green),
+                    const SizedBox(width: 10),
+                    _statCard('Untagged', '$untagged',
+                        color: Colors.orange),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Status breakdown.
+                const Text(
+                  'Status Breakdown',
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const Divider(),
+                if (total == 0)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('No cows recorded yet.',
+                        style: TextStyle(color: Colors.grey)),
+                  )
+                else
+                  ...CowStatus.values.map(
+                    (status) => _statusBar(
+                        status, statusCounts[status] ?? 0, total),
+                  ),
+
+                const SizedBox(height: 24),
+
+                // Breed breakdown.
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Breed Breakdown',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '${breedCounts.length} breed${breedCounts.length == 1 ? '' : 's'}',
+                      style: const TextStyle(
+                          fontSize: 13, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                if (breedCounts.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('No cows recorded yet.',
+                        style: TextStyle(color: Colors.grey)),
+                  )
+                else
+                  ...breedCounts.map(
+                    (entry) =>
+                        _breedRow(entry.key, entry.value, total),
+                  ),
+              ],
+            ),
+          ),
     );
   }
 }
