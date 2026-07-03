@@ -14,6 +14,7 @@ import 'models/breeding_record.dart';
 import 'models/milk_production.dart';
 import 'models/weight_record.dart';
 import 'services/sync_service.dart';
+import 'screens/login_screen.dart';
 
 late Isar isar;
 
@@ -56,7 +57,8 @@ class FarmApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: const MainNavigation(),
+//      home: const MainNavigation(),
+      home: const AuthGate(), 
     );
   }
 }
@@ -111,6 +113,28 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Decides whether to show the login screen or the main app,
+/// based on current Supabase auth state. Also listens for
+/// sign-in/sign-out events to react automatically.
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      builder: (context, snapshot) {
+        final session = Supabase.instance.client.auth.currentSession;
+
+        if (session != null) {
+          return const MainNavigation();
+        }
+        return const LoginScreen();
+      },
     );
   }
 }
