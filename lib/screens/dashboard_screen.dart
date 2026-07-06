@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 import '../main.dart';
 import '../models/cow.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/farm_service.dart';
 
 /// Dashboard — gives a quick overview of the farm's cattle.
 /// Shows total cows, status breakdown, tagged/untagged counts,
@@ -218,8 +219,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   TextButton(
                     onPressed: () async {
-                      Navigator.pop(context);
-                      await Supabase.instance.client.auth.signOut();
+                    Navigator.pop(context);
+                    await FarmService().clearLocalFarm();
+                    await Supabase.instance.client.auth.signOut();
                     },
                     child: const Text(
                       'Sign Out',

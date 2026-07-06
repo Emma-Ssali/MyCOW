@@ -15,6 +15,8 @@ import 'models/milk_production.dart';
 import 'models/weight_record.dart';
 import 'services/sync_service.dart';
 import 'screens/login_screen.dart';
+import 'screens/farm_setup_screen.dart';
+import 'services/farm_service.dart';
 
 late Isar isar;
 
@@ -131,7 +133,20 @@ class AuthGate extends StatelessWidget {
         if (snapshot.hasData) {
           final session = snapshot.data!.session;
           if (session != null) {
-            return const MainNavigation();
+            return FutureBuilder<bool>(
+              future: FarmService().isLinkedToFarm,
+              builder: (context, farmSnapshot) {
+                if (!farmSnapshot.hasData) {
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (farmSnapshot.data == true) {
+                  return const MainNavigation();
+                }
+                return const FarmSetupScreen();
+              },
+            );
           }
         }
         return const LoginScreen();
