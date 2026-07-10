@@ -33,29 +33,90 @@ class _FarmSetupScreenState extends State<FarmSetupScreen> {
 
   Future<void> _createFarm() async {
     if (!_createFormKey.currentState!.validate()) return;
-    setState(() {
-      _loading = true;
-      _errorMessage = null;
-    });
+  setState(() {
+    _loading = true;
+    _errorMessage = null;
+  });
 
-    try {
-      await FarmService().createFarm(
-        _farmNameController.text.trim(),
-        _locationController.text.trim().isEmpty
-            ? null
-            : _locationController.text.trim(),
+  try {
+    final farmName = _farmNameController.text.trim();
+    final inviteCode = await FarmService().createFarm(
+      farmName,
+      _locationController.text.trim().isEmpty
+          ? null
+          : _locationController.text.trim(),
+    );
+
+    if (mounted) {
+      // Show success dialog with farm name and invite code.
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Farm Created! 🎉'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                farmName,
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Your invite code:',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade300),
+                ),
+                child: Text(
+                  inviteCode,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 6,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Share this code with workers so they can join your farm.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Continue to App'),
+            ),
+          ],
+        ),
       );
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainNavigation()),
         );
       }
-    } catch (e) {
-      setState(() => _errorMessage = e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
+  } catch (e) {
+    setState(() => _errorMessage = e.toString());
+  } finally {
+    if (mounted) setState(() => _loading = false);
+  }
   }
 
   Future<void> _joinFarm() async {

@@ -56,7 +56,7 @@ class FarmService {
   }
 
   /// Creates a new farm and makes the current user the owner.
-  Future<void> createFarm(String farmName, String? location) async {
+  Future<String> createFarm(String farmName, String? location) async {
     final user = _supabase.auth.currentUser!;
     final inviteCode = _generateInviteCode();
 
@@ -80,6 +80,7 @@ class FarmService {
     });
 
     await _saveFarmLocally(farmId, farmName, 'owner');
+    return inviteCode;
   }
 
   /// Joins an existing farm using an invite code.
