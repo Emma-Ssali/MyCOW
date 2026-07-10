@@ -4,6 +4,7 @@ import '../main.dart';
 import '../models/cow.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/farm_service.dart';
+import 'package:flutter/services.dart';
 
 /// Dashboard — gives a quick overview of the farm's cattle.
 /// Shows total cows, status breakdown, tagged/untagged counts,
@@ -19,10 +20,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Cow> _cows = [];
   bool _loading = true;
 
+  // Farm info.
+  String? _farmName;
+  String? _userRole;
+  String? _inviteCode;
+
+  late int _selectedYear;
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    _loadFarmInfo();
   }
 
   Future<void> _loadData() async {
@@ -33,6 +42,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _loading = false;
     });
   }
+
+  Future<void> _loadFarmInfo() async {
+  final farmName = await FarmService().localFarmName;
+  final userRole = await FarmService().localUserRole;
+  final inviteCode = await FarmService().localInviteCode;
+  setState(() {
+    _farmName = farmName;
+    _userRole = userRole;
+    _inviteCode = inviteCode;
+  });
+}
 
   /// Counts how many cows have each status.
   Map<CowStatus, int> _statusCounts() {
@@ -169,7 +189,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-      title: const Text('Dashboard'),
+      title: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Dashboard',
+            style: TextStyle(fontSize: 18)),
+        if (_farmName != null)
+          Text(
+            _farmName!,
+            style: const TextStyle(
+                fontSize: 12, color: Colors.grey),
+          ),
+      ],
+      ),
       actions: [
         // Show user's name next to the icon.
         Center(
@@ -242,8 +274,105 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Top summary cards: total, tagged, untagged.
-                Row(
+              // Farm info card — shown to all users.
+              if (_farmName != null)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.agriculture, size: 18),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _farmName!,
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: _userRole == 'owner'
+                                    ? Colors.green.withValues(alpha: 0.2)
+                                    : Colors.blue.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                _userRole == 'owner' ? 'Owner' : 'Worker',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: _userRole == 'owner'
+                                      ? Colors.green
+                                      : Colors.blue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Show invite code only to the owner.
+                        if (_userRole == 'owner' && _inviteCode != null) ...[
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Invite code for workers:',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border:
+                                      Border.all(color: Colors.green.shade300),
+                                ),
+                                child: Text(
+                                  _inviteCode!,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 4,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Copy to clipboard button.
+                              IconButton(
+                                icon: const Icon(Icons.copy, size: 18),
+                                tooltip: 'Copy invite code',
+                                onPressed: () {
+                                  // Copy to clipboard.
+                                  Clipboard.setData(ClipboardData(text: _inviteCode!));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Invite code copied!'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+              ),
+              // Top summary cards: total, tagged, untagged.
+              Row(
                   children: [
                     _statCard('Total Cows', '$total'),
                     const SizedBox(width: 10),

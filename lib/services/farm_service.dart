@@ -11,6 +11,7 @@ class FarmService {
   static const _farmIdKey = 'farm_id';
   static const _farmNameKey = 'farm_name';
   static const _userRoleKey = 'user_role';
+  static const _inviteCodeKey = 'invite_code';
 
   /// Returns the locally stored farm ID, or null if not joined yet.
   Future<String?> get localFarmId async {
@@ -24,6 +25,11 @@ class FarmService {
     return prefs.getString(_farmNameKey);
   }
 
+  Future<String?> get localInviteCode async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString(_inviteCodeKey);
+}
+
   /// Returns the locally stored user role.
   Future<String> get localUserRole async {
     final prefs = await SharedPreferences.getInstance();
@@ -31,13 +37,16 @@ class FarmService {
   }
 
   /// Saves farm details locally after creating or joining.
-  Future<void> _saveFarmLocally(
-      String farmId, String farmName, String role) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_farmIdKey, farmId);
-    await prefs.setString(_farmNameKey, farmName);
-    await prefs.setString(_userRoleKey, role);
+ Future<void> _saveFarmLocally(
+    String farmId, String farmName, String role, {String? inviteCode}) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(_farmIdKey, farmId);
+  await prefs.setString(_farmNameKey, farmName);
+  await prefs.setString(_userRoleKey, role);
+  if (inviteCode != null) {
+    await prefs.setString(_inviteCodeKey, inviteCode);
   }
+}
 
   /// Clears local farm data on sign out.
   Future<void> clearLocalFarm() async {
@@ -45,6 +54,7 @@ class FarmService {
     await prefs.remove(_farmIdKey);
     await prefs.remove(_farmNameKey);
     await prefs.remove(_userRoleKey);
+    await prefs.remove(_inviteCodeKey);
   }
 
   /// Generates a random 6-character invite code.
@@ -79,7 +89,7 @@ class FarmService {
       'role': 'owner',
     });
 
-    await _saveFarmLocally(farmId, farmName, 'owner');
+    await _saveFarmLocally(farmId, farmName, 'owner', inviteCode: inviteCode);
     return inviteCode;
   }
 
