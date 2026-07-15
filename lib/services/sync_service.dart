@@ -1,6 +1,7 @@
 import 'package:isar/isar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import '../models/cow.dart';
 import '../models/transaction.dart';
@@ -8,15 +9,18 @@ import '../models/health_record.dart';
 import '../models/breeding_record.dart';
 import '../models/milk_production.dart';
 import '../models/weight_record.dart';
+import 'farm_service.dart';
 
-/// SyncService — pushes pending local records to Supabase
-/// and pulls remote changes back to Isar.
+/// SyncService — bidirectional sync between local Isar and Supabase.
+/// Push: sends pending local records to Supabase.
+/// Pull: fetches remote changes and saves them to local Isar.
 class SyncService {
   static final SyncService _instance = SyncService._internal();
   factory SyncService() => _instance;
   SyncService._internal();
 
   final _supabase = Supabase.instance.client;
+  static const _lastSyncKey = 'last_sync_at';
 
   /// Check if device has internet connectivity.
   Future<bool> get _hasInternet async {
@@ -24,27 +28,56 @@ class SyncService {
     return result != ConnectivityResult.none;
   }
 
-  /// Main sync entry point — call this whenever you want to sync.
+  /// Get the last sync timestamp from local storage.
+  Future<DateTime?> get _lastSyncAt async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(_lastSyncKey);
+    if (stored == null) return null;
+    return DateTime.tryParse(stored);
+  }
+
+  /// Save the current time as last sync timestamp.
+  Future<void> _updateLastSyncAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastSyncKey, DateTime.now().toIso8601String());
+  }
+
+  /// Main sync entry point — push then pull.
   Future<void> sync() async {
     if (!await _hasInternet) return;
 
+    final farmId = await FarmService().localFarmId;
+    if (farmId == null) return; // No farm set up yet.
+
     try {
-      await _syncCows();
-      await _syncTransactions();
-      await _syncHealthRecords();
-      await _syncBreedingRecords();
-      await _syncMilkProduction();
-      await _syncWeightRecords();
+      // Push local pending records first.
+      await _pushCows(farmId);
+      await _pushTransactions(farmId);
+      await _pushHealthRecords(farmId);
+      await _pushBreedingRecords(farmId);
+      await _pushMilkProduction(farmId);
+      await _pushWeightRecords(farmId);
+
+      // Then pull remote changes.
+      await _pullCows(farmId);
+      await _pullTransactions(farmId);
+      await _pullHealthRecords(farmId);
+      await _pullBreedingRecords(farmId);
+      await _pullMilkProduction(farmId);
+      await _pullWeightRecords(farmId);
+
+      // Update last sync timestamp.
+      await _updateLastSyncAt();
     } catch (e) {
-      // Sync failure is non-fatal — app continues working offline.
       print('Sync error: $e');
     }
   }
 
-  // ── COWS ─────────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════
+  // PUSH — Local Isar → Supabase
+  // ══════════════════════════════════════════════════════════════
 
-  Future<void> _syncCows() async {
-    // Push pending local cows to Supabase.
+  Future<void> _pushCows(String farmId) async {
     final pending = await isar.cows
         .filter()
         .syncStatusEqualTo(SyncStatus.pending)
@@ -63,7 +96,7 @@ class SyncService {
           'source': cow.source,
           'notes': cow.notes,
           'photo_path': cow.photoPath,
-          'farm_id': cow.farmId,
+          'farm_id': farmId,
           'created_by': cow.createdBy,
           'created_at': cow.createdAt.toIso8601String(),
           'updated_at': cow.updatedAt.toIso8601String(),
@@ -71,13 +104,12 @@ class SyncService {
           'is_deleted': false,
         });
 
-        // Mark as synced in Isar.
         await isar.writeTxn(() async {
           cow.syncStatus = SyncStatus.synced;
+          cow.farmId = farmId;
           await isar.cows.put(cow);
         });
       } catch (e) {
-        // Mark as failed — will retry next sync.
         await isar.writeTxn(() async {
           cow.syncStatus = SyncStatus.failed;
           await isar.cows.put(cow);
@@ -86,9 +118,7 @@ class SyncService {
     }
   }
 
-  // ── TRANSACTIONS ─────────────────────────────────────────────────
-
-  Future<void> _syncTransactions() async {
+  Future<void> _pushTransactions(String farmId) async {
     final pending = await isar.farmTransactions
         .filter()
         .syncStatusEqualTo(TransactionSyncStatus.pending)
@@ -104,7 +134,7 @@ class SyncService {
           'description': tx.description,
           'date': tx.date.toIso8601String(),
           'cow_id': tx.cowId,
-          'farm_id': tx.farmId,
+          'farm_id': farmId,
           'created_by': tx.createdBy,
           'created_at': tx.createdAt.toIso8601String(),
           'updated_at': tx.updatedAt.toIso8601String(),
@@ -114,6 +144,7 @@ class SyncService {
 
         await isar.writeTxn(() async {
           tx.syncStatus = TransactionSyncStatus.synced;
+          tx.farmId = farmId;
           await isar.farmTransactions.put(tx);
         });
       } catch (e) {
@@ -125,9 +156,7 @@ class SyncService {
     }
   }
 
-  // ── HEALTH RECORDS ───────────────────────────────────────────────
-
-  Future<void> _syncHealthRecords() async {
+  Future<void> _pushHealthRecords(String farmId) async {
     final pending = await isar.healthRecords
         .filter()
         .syncStatusEqualTo(HealthSyncStatus.pending)
@@ -144,7 +173,7 @@ class SyncService {
           'veterinarian': record.veterinarian,
           'cost_ugx': record.costUgx,
           'notes': record.notes,
-          'farm_id': record.farmId,
+          'farm_id': farmId,
           'created_by': record.createdBy,
           'created_at': record.createdAt.toIso8601String(),
           'updated_at': record.updatedAt.toIso8601String(),
@@ -154,6 +183,7 @@ class SyncService {
 
         await isar.writeTxn(() async {
           record.syncStatus = HealthSyncStatus.synced;
+          record.farmId = farmId;
           await isar.healthRecords.put(record);
         });
       } catch (e) {
@@ -165,9 +195,7 @@ class SyncService {
     }
   }
 
-  // ── BREEDING RECORDS ─────────────────────────────────────────────
-
-  Future<void> _syncBreedingRecords() async {
+  Future<void> _pushBreedingRecords(String farmId) async {
     final pending = await isar.breedingRecords
         .filter()
         .syncStatusEqualTo(BreedingSyncStatus.pending)
@@ -189,7 +217,7 @@ class SyncService {
               record.actualCalvingDate?.toIso8601String(),
           'calves_born': record.calvesBorn,
           'notes': record.notes,
-          'farm_id': record.farmId,
+          'farm_id': farmId,
           'created_by': record.createdBy,
           'created_at': record.createdAt.toIso8601String(),
           'updated_at': record.updatedAt.toIso8601String(),
@@ -199,6 +227,7 @@ class SyncService {
 
         await isar.writeTxn(() async {
           record.syncStatus = BreedingSyncStatus.synced;
+          record.farmId = farmId;
           await isar.breedingRecords.put(record);
         });
       } catch (e) {
@@ -210,9 +239,7 @@ class SyncService {
     }
   }
 
-  // ── MILK PRODUCTION ──────────────────────────────────────────────
-
-  Future<void> _syncMilkProduction() async {
+  Future<void> _pushMilkProduction(String farmId) async {
     final pending = await isar.milkProductions
         .filter()
         .syncStatusEqualTo(MilkSyncStatus.pending)
@@ -229,7 +256,7 @@ class SyncService {
           'total_litres': record.totalLitres,
           'price_per_litre_ugx': record.pricePerLitreUgx,
           'notes': record.notes,
-          'farm_id': record.farmId,
+          'farm_id': farmId,
           'created_by': record.createdBy,
           'created_at': record.createdAt.toIso8601String(),
           'updated_at': record.updatedAt.toIso8601String(),
@@ -239,6 +266,7 @@ class SyncService {
 
         await isar.writeTxn(() async {
           record.syncStatus = MilkSyncStatus.synced;
+          record.farmId = farmId;
           await isar.milkProductions.put(record);
         });
       } catch (e) {
@@ -250,9 +278,7 @@ class SyncService {
     }
   }
 
-  // ── WEIGHT RECORDS ───────────────────────────────────────────────
-
-  Future<void> _syncWeightRecords() async {
+  Future<void> _pushWeightRecords(String farmId) async {
     final pending = await isar.weightRecords
         .filter()
         .syncStatusEqualTo(WeightSyncStatus.pending)
@@ -266,7 +292,7 @@ class SyncService {
           'date': record.date.toIso8601String(),
           'weight_kg': record.weightKg,
           'notes': record.notes,
-          'farm_id': record.farmId,
+          'farm_id': farmId,
           'created_by': record.createdBy,
           'created_at': record.createdAt.toIso8601String(),
           'updated_at': record.updatedAt.toIso8601String(),
@@ -276,6 +302,7 @@ class SyncService {
 
         await isar.writeTxn(() async {
           record.syncStatus = WeightSyncStatus.synced;
+          record.farmId = farmId;
           await isar.weightRecords.put(record);
         });
       } catch (e) {
@@ -284,6 +311,369 @@ class SyncService {
           await isar.weightRecords.put(record);
         });
       }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // PULL — Supabase → Local Isar
+  // ══════════════════════════════════════════════════════════════
+
+  Future<void> _pullCows(String farmId) async {
+    final lastSync = await _lastSyncAt;
+
+    var query = _supabase
+        .from('cows')
+        .select()
+        .eq('farm_id', farmId)
+        .eq('is_deleted', false);
+
+    // Only fetch records updated since last sync.
+    final data = lastSync != null
+        ? await query.gt('updated_at', lastSync.toIso8601String())
+        : await query;
+
+    for (final row in data) {
+      try {
+        // Check if record already exists locally.
+        final existing = await isar.cows.get(row['id'] as int);
+
+        // Skip if local record is newer (last-write-wins).
+        if (existing != null &&
+            existing.updatedAt
+                .isAfter(DateTime.parse(row['updated_at']))) {
+          continue;
+        }
+
+        final cow = existing ?? Cow();
+        cow.id = row['id'] as int;
+        cow.tagNumber = row['tag_number'] ?? '';
+        cow.breed = row['breed'] ?? 'Unknown';
+        cow.sex = row['sex'] == 'male' ? CowSex.male : CowSex.female;
+        cow.status = _parseCowStatus(row['status']);
+        cow.dateOfBirth = row['date_of_birth'] != null
+            ? DateTime.tryParse(row['date_of_birth'])
+            : null;
+        cow.acquisitionDate = DateTime.parse(row['acquisition_date']);
+        cow.source = row['source'];
+        cow.notes = row['notes'];
+        cow.photoPath = row['photo_path'];
+        cow.farmId = row['farm_id'];
+        cow.createdBy = row['created_by'];
+        cow.createdAt = DateTime.parse(row['created_at']);
+        cow.updatedAt = DateTime.parse(row['updated_at']);
+        cow.syncStatus = SyncStatus.synced;
+
+        await isar.writeTxn(() async {
+          await isar.cows.put(cow);
+        });
+      } catch (e) {
+        print('Error pulling cow ${row['id']}: $e');
+      }
+    }
+  }
+
+  Future<void> _pullTransactions(String farmId) async {
+    final lastSync = await _lastSyncAt;
+
+    var query = _supabase
+        .from('farm_transactions')
+        .select()
+        .eq('farm_id', farmId)
+        .eq('is_deleted', false);
+
+    final data = lastSync != null
+        ? await query.gt('updated_at', lastSync.toIso8601String())
+        : await query;
+
+    for (final row in data) {
+      try {
+        final existing =
+            await isar.farmTransactions.get(row['id'] as int);
+
+        if (existing != null &&
+            existing.updatedAt
+                .isAfter(DateTime.parse(row['updated_at']))) {
+          continue;
+        }
+
+        final tx = existing ?? FarmTransaction();
+        tx.id = row['id'] as int;
+        tx.type = row['type'] == 'income'
+            ? TransactionType.income
+            : TransactionType.expense;
+        tx.amountUgx = (row['amount_ugx'] as num).toDouble();
+        tx.category = row['category'] ?? '';
+        tx.description = row['description'];
+        tx.date = DateTime.parse(row['date']);
+        tx.cowId = row['cow_id'] as int?;
+        tx.farmId = row['farm_id'];
+        tx.createdBy = row['created_by'];
+        tx.createdAt = DateTime.parse(row['created_at']);
+        tx.updatedAt = DateTime.parse(row['updated_at']);
+        tx.syncStatus = TransactionSyncStatus.synced;
+
+        await isar.writeTxn(() async {
+          await isar.farmTransactions.put(tx);
+        });
+      } catch (e) {
+        print('Error pulling transaction ${row['id']}: $e');
+      }
+    }
+  }
+
+  Future<void> _pullHealthRecords(String farmId) async {
+    final lastSync = await _lastSyncAt;
+
+    var query = _supabase
+        .from('health_records')
+        .select()
+        .eq('farm_id', farmId)
+        .eq('is_deleted', false);
+
+    final data = lastSync != null
+        ? await query.gt('updated_at', lastSync.toIso8601String())
+        : await query;
+
+    for (final row in data) {
+      try {
+        final existing =
+            await isar.healthRecords.get(row['id'] as int);
+
+        if (existing != null &&
+            existing.updatedAt
+                .isAfter(DateTime.parse(row['updated_at']))) {
+          continue;
+        }
+
+        final record = existing ?? HealthRecord();
+        record.id = row['id'] as int;
+        record.cowId = row['cow_id'] as int;
+        record.type = _parseHealthType(row['type']);
+        record.date = DateTime.parse(row['date']);
+        record.medication = row['medication'];
+        record.veterinarian = row['veterinarian'];
+        record.costUgx = row['cost_ugx'] != null
+            ? (row['cost_ugx'] as num).toDouble()
+            : null;
+        record.notes = row['notes'];
+        record.farmId = row['farm_id'];
+        record.createdBy = row['created_by'];
+        record.createdAt = DateTime.parse(row['created_at']);
+        record.updatedAt = DateTime.parse(row['updated_at']);
+        record.syncStatus = HealthSyncStatus.synced;
+
+        await isar.writeTxn(() async {
+          await isar.healthRecords.put(record);
+        });
+      } catch (e) {
+        print('Error pulling health record ${row['id']}: $e');
+      }
+    }
+  }
+
+  Future<void> _pullBreedingRecords(String farmId) async {
+    final lastSync = await _lastSyncAt;
+
+    var query = _supabase
+        .from('breeding_records')
+        .select()
+        .eq('farm_id', farmId)
+        .eq('is_deleted', false);
+
+    final data = lastSync != null
+        ? await query.gt('updated_at', lastSync.toIso8601String())
+        : await query;
+
+    for (final row in data) {
+      try {
+        final existing =
+            await isar.breedingRecords.get(row['id'] as int);
+
+        if (existing != null &&
+            existing.updatedAt
+                .isAfter(DateTime.parse(row['updated_at']))) {
+          continue;
+        }
+
+        final record = existing ?? BreedingRecord();
+        record.id = row['id'] as int;
+        record.cowId = row['cow_id'] as int;
+        record.heatDate = row['heat_date'] != null
+            ? DateTime.tryParse(row['heat_date'])
+            : null;
+        record.serviceDate = row['service_date'] != null
+            ? DateTime.tryParse(row['service_date'])
+            : null;
+        record.bullUsed = row['bull_used'];
+        record.artificialInsemination =
+            row['artificial_insemination'] ?? false;
+        record.pregnancyStatus =
+            _parsePregnancyStatus(row['pregnancy_status']);
+        record.expectedCalvingDate =
+            row['expected_calving_date'] != null
+                ? DateTime.tryParse(row['expected_calving_date'])
+                : null;
+        record.actualCalvingDate = row['actual_calving_date'] != null
+            ? DateTime.tryParse(row['actual_calving_date'])
+            : null;
+        record.calvesBorn = row['calves_born'] as int?;
+        record.notes = row['notes'];
+        record.farmId = row['farm_id'];
+        record.createdBy = row['created_by'];
+        record.createdAt = DateTime.parse(row['created_at']);
+        record.updatedAt = DateTime.parse(row['updated_at']);
+        record.syncStatus = BreedingSyncStatus.synced;
+
+        await isar.writeTxn(() async {
+          await isar.breedingRecords.put(record);
+        });
+      } catch (e) {
+        print('Error pulling breeding record ${row['id']}: $e');
+      }
+    }
+  }
+
+  Future<void> _pullMilkProduction(String farmId) async {
+    final lastSync = await _lastSyncAt;
+
+    var query = _supabase
+        .from('milk_production')
+        .select()
+        .eq('farm_id', farmId)
+        .eq('is_deleted', false);
+
+    final data = lastSync != null
+        ? await query.gt('updated_at', lastSync.toIso8601String())
+        : await query;
+
+    for (final row in data) {
+      try {
+        final existing =
+            await isar.milkProductions.get(row['id'] as int);
+
+        if (existing != null &&
+            existing.updatedAt
+                .isAfter(DateTime.parse(row['updated_at']))) {
+          continue;
+        }
+
+        final record = existing ?? MilkProduction();
+        record.id = row['id'] as int;
+        record.cowId = row['cow_id'] as int;
+        record.date = DateTime.parse(row['date']);
+        record.morningLitres =
+            (row['morning_litres'] as num).toDouble();
+        record.eveningLitres =
+            (row['evening_litres'] as num).toDouble();
+        record.totalLitres = (row['total_litres'] as num).toDouble();
+        record.pricePerLitreUgx = row['price_per_litre_ugx'] != null
+            ? (row['price_per_litre_ugx'] as num).toDouble()
+            : null;
+        record.notes = row['notes'];
+        record.farmId = row['farm_id'];
+        record.createdBy = row['created_by'];
+        record.createdAt = DateTime.parse(row['created_at']);
+        record.updatedAt = DateTime.parse(row['updated_at']);
+        record.syncStatus = MilkSyncStatus.synced;
+
+        await isar.writeTxn(() async {
+          await isar.milkProductions.put(record);
+        });
+      } catch (e) {
+        print('Error pulling milk record ${row['id']}: $e');
+      }
+    }
+  }
+
+  Future<void> _pullWeightRecords(String farmId) async {
+    final lastSync = await _lastSyncAt;
+
+    var query = _supabase
+        .from('weight_records')
+        .select()
+        .eq('farm_id', farmId)
+        .eq('is_deleted', false);
+
+    final data = lastSync != null
+        ? await query.gt('updated_at', lastSync.toIso8601String())
+        : await query;
+
+    for (final row in data) {
+      try {
+        final existing =
+            await isar.weightRecords.get(row['id'] as int);
+
+        if (existing != null &&
+            existing.updatedAt
+                .isAfter(DateTime.parse(row['updated_at']))) {
+          continue;
+        }
+
+        final record = existing ?? WeightRecord();
+        record.id = row['id'] as int;
+        record.cowId = row['cow_id'] as int;
+        record.date = DateTime.parse(row['date']);
+        record.weightKg = (row['weight_kg'] as num).toDouble();
+        record.notes = row['notes'];
+        record.farmId = row['farm_id'];
+        record.createdBy = row['created_by'];
+        record.createdAt = DateTime.parse(row['created_at']);
+        record.updatedAt = DateTime.parse(row['updated_at']);
+        record.syncStatus = WeightSyncStatus.synced;
+
+        await isar.writeTxn(() async {
+          await isar.weightRecords.put(record);
+        });
+      } catch (e) {
+        print('Error pulling weight record ${row['id']}: $e');
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // ENUM PARSERS
+  // ══════════════════════════════════════════════════════════════
+
+  CowStatus _parseCowStatus(String? value) {
+    switch (value) {
+      case 'sold':
+        return CowStatus.sold;
+      case 'dead':
+        return CowStatus.dead;
+      case 'missing':
+        return CowStatus.missing;
+      default:
+        return CowStatus.active;
+    }
+  }
+
+  HealthRecordType _parseHealthType(String? value) {
+    switch (value) {
+      case 'treatment':
+        return HealthRecordType.treatment;
+      case 'deworming':
+        return HealthRecordType.deworming;
+      case 'vetVisit':
+        return HealthRecordType.vetVisit;
+      case 'disease':
+        return HealthRecordType.disease;
+      case 'other':
+        return HealthRecordType.other;
+      default:
+        return HealthRecordType.vaccination;
+    }
+  }
+
+  PregnancyStatus _parsePregnancyStatus(String? value) {
+    switch (value) {
+      case 'confirmed':
+        return PregnancyStatus.confirmed;
+      case 'notPregnant':
+        return PregnancyStatus.notPregnant;
+      case 'delivered':
+        return PregnancyStatus.delivered;
+      default:
+        return PregnancyStatus.unknown;
     }
   }
 }
