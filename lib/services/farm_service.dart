@@ -141,4 +141,37 @@ class FarmService {
     final farmId = await localFarmId;
     return farmId != null;
   }
+
+  /// Restores farm data from Supabase if local data is missing.
+  /// Called on app startup after login.
+  Future<void> restoreFarmFromSupabase() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existingFarmId = prefs.getString(_farmIdKey);
+    if (existingFarmId != null) return; // Already have local data.
+
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      // Find farm membership for this user.
+      final members = await _supabase
+          .from('farm_members')
+          .select('farm_id, role, farms(name, invite_code)')
+          .eq('user_id', user.id);
+
+      if (members.isEmpty) return;
+
+      final member = members.first;
+      final farmId = member['farm_id'] as String;
+      final role = member['role'] as String;
+      final farm = member['farms'] as Map<String, dynamic>;
+      final farmName = farm['name'] as String;
+      final inviteCode = farm['invite_code'] as String;
+
+      await _saveFarmLocally(farmId, farmName, role,
+          inviteCode: role == 'owner' ? inviteCode : null);
+    } catch (e) {
+      print('Error restoring farm: $e');
+    }
+  }
 }

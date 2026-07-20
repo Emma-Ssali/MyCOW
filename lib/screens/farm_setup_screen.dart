@@ -106,6 +106,7 @@ class _FarmSetupScreenState extends State<FarmSetupScreen> {
       );
 
       if (mounted) {
+        setState(() {});
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainNavigation()),

@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,7 @@ import 'services/sync_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/farm_setup_screen.dart';
 import 'services/farm_service.dart';
+import 'dart:async';
 
 late Isar isar;
 
@@ -30,16 +32,14 @@ void main() async {
   );
 
   final dir = await getApplicationDocumentsDirectory();
-  isar = await Isar.open(
-    [CowSchema, 
-    FarmTransactionSchema, 
-    HealthRecordSchema, 
-    BreedingRecordSchema, 
+  isar = await Isar.open([
+    CowSchema,
+    FarmTransactionSchema,
+    HealthRecordSchema,
+    BreedingRecordSchema,
     MilkProductionSchema,
-    WeightRecordSchema
-    ],
-    directory: dir.path,
-  );
+    WeightRecordSchema,
+  ], directory: dir.path);
 
   // Start background sync after app initializes.
   SyncService().sync();
@@ -59,8 +59,8 @@ class FarmApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-//      home: const MainNavigation(),
-      home: const AuthGate(), 
+      //      home: const MainNavigation(),
+      home: const AuthGate(),
     );
   }
 }
@@ -75,6 +75,8 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  Timer? _syncTimer;
+  StreamSubscription? _connectivitySubscription;
 
   final List<Widget> _screens = const [
     DashboardScreen(),
@@ -82,6 +84,32 @@ class _MainNavigationState extends State<MainNavigation> {
     FinanceScreen(),
     HealthDashboardScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Run sync every 5 minutes while app is open.
+    _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      SyncService().sync();
+    });
+
+    // Sync immediately when internet is regained.
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      results,
+    ) {
+      final hasInternet = results.any((r) => r != ConnectivityResult.none);
+      if (hasInternet) {
+        SyncService().sync();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncTimer?.cancel();
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,34 +150,56 @@ class _MainNavigationState extends State<MainNavigation> {
 /// Decides whether to show the login screen or the main app,
 /// based on current Supabase auth state. Also listens for
 /// sign-in/sign-out events to react automatically.
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool? _isLinkedToFarm;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFarm();
+  }
+
+  Future<void> _checkFarm() async {
+    // Try to restore farm data from Supabase if missing locally.
+    await FarmService().restoreFarmFromSupabase();
+    final linked = await FarmService().isLinkedToFarm;
+    if (mounted) setState(() => _isLinkedToFarm = linked);
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          final session = snapshot.data!.session;
-          if (session != null) {
-            return FutureBuilder<bool>(
-              future: FarmService().isLinkedToFarm,
-              builder: (context, farmSnapshot) {
-                if (!farmSnapshot.hasData) {
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                if (farmSnapshot.data == true) {
-                  return const MainNavigation();
-                }
-                return const FarmSetupScreen();
-              },
-            );
-          }
+        final session = Supabase.instance.client.auth.currentSession;
+
+        if (session == null) {
+          // Not logged in — reset farm cache and show login.
+          _isLinkedToFarm = null;
+          return const LoginScreen();
         }
-        return const LoginScreen();
+
+        // Logged in but still checking farm status.
+        if (_isLinkedToFarm == null) {
+          _checkFarm();
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Logged in and farm check complete.
+        if (_isLinkedToFarm == true) {
+          return const MainNavigation();
+        }
+
+        return const FarmSetupScreen();
       },
     );
   }

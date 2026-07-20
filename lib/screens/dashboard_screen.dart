@@ -5,6 +5,10 @@ import '../models/cow.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/farm_service.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/sync_service.dart';
+import '../screens/login_screen.dart';
+
 
 /// Dashboard — gives a quick overview of the farm's cattle.
 /// Shows total cows, status breakdown, tagged/untagged counts,
@@ -215,54 +219,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
+
+        // TEMPORARY TEST BUTTON — remove after testing
+        IconButton(
+          icon: const Icon(Icons.sync),
+          tooltip: 'Force Full Sync',
+          onPressed: () async {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.remove('last_sync_at');
+
+            await SyncService().sync();
+
+            if (!context.mounted) return;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Full sync triggered')),
+            );
+          },
+        ),
+
         IconButton(
           icon: const Icon(Icons.person_outline),
           tooltip: 'Account',
-          onPressed: () {
+          onPressed: () async {
+            // Refresh user data first.
+            await Supabase.instance.client.auth.refreshSession();
             final user = Supabase.instance.client.auth.currentUser;
-            final name = user?.userMetadata?['full_name'] ?? 'Unknown';
+            final name = user?.userMetadata?['full_name'] ??
+                user?.email?.split('@').first ??
+                'Unknown';
             final email = user?.email ?? 'Unknown';
 
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Account'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16),
+            if (context.mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Account'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        email,
+                        style: const TextStyle(
+                            fontSize: 13, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      email,
-                      style: const TextStyle(
-                          fontSize: 13, color: Colors.grey),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await FarmService().clearLocalFarm();
+                        await Supabase.instance.client.auth.signOut();
+                        if (context.mounted) {
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                                builder: (context) => const LoginScreen()),
+                            (route) => false,
+                          );
+                        }
+                      },
+                      child: const Text(
+                        'Sign Out',
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                   ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                    Navigator.pop(context);
-                    await FarmService().clearLocalFarm();
-                    await Supabase.instance.client.auth.signOut();
-                    },
-                    child: const Text(
-                      'Sign Out',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            );
+              );
+            }
           },
         ),
       ],

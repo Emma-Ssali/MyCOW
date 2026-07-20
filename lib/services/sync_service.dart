@@ -319,58 +319,55 @@ class SyncService {
   // ══════════════════════════════════════════════════════════════
 
   Future<void> _pullCows(String farmId) async {
-    final lastSync = await _lastSyncAt;
+  // Temporarily ignore lastSync to force full pull for testing.
+  // final lastSync = await _lastSyncAt;
 
-    var query = _supabase
-        .from('cows')
-        .select()
-        .eq('farm_id', farmId)
-        .eq('is_deleted', false);
+  // Fetch ALL records for this farm (ignoring last sync timestamp for now).
+  final data = await _supabase
+      .from('cows')
+      .select()
+      .eq('farm_id', farmId)
+      .eq('is_deleted', false);
 
-    // Only fetch records updated since last sync.
-    final data = lastSync != null
-        ? await query.gt('updated_at', lastSync.toIso8601String())
-        : await query;
+  for (final row in data) {
+    try {
+      // Check if record already exists locally.
+      final existing = await isar.cows.get(row['id'] as int);
 
-    for (final row in data) {
-      try {
-        // Check if record already exists locally.
-        final existing = await isar.cows.get(row['id'] as int);
-
-        // Skip if local record is newer (last-write-wins).
-        if (existing != null &&
-            existing.updatedAt
-                .isAfter(DateTime.parse(row['updated_at']))) {
-          continue;
-        }
-
-        final cow = existing ?? Cow();
-        cow.id = row['id'] as int;
-        cow.tagNumber = row['tag_number'] ?? '';
-        cow.breed = row['breed'] ?? 'Unknown';
-        cow.sex = row['sex'] == 'male' ? CowSex.male : CowSex.female;
-        cow.status = _parseCowStatus(row['status']);
-        cow.dateOfBirth = row['date_of_birth'] != null
-            ? DateTime.tryParse(row['date_of_birth'])
-            : null;
-        cow.acquisitionDate = DateTime.parse(row['acquisition_date']);
-        cow.source = row['source'];
-        cow.notes = row['notes'];
-        cow.photoPath = row['photo_path'];
-        cow.farmId = row['farm_id'];
-        cow.createdBy = row['created_by'];
-        cow.createdAt = DateTime.parse(row['created_at']);
-        cow.updatedAt = DateTime.parse(row['updated_at']);
-        cow.syncStatus = SyncStatus.synced;
-
-        await isar.writeTxn(() async {
-          await isar.cows.put(cow);
-        });
-      } catch (e) {
-        print('Error pulling cow ${row['id']}: $e');
+      // Skip if local record is newer (last-write-wins).
+      if (existing != null &&
+          existing.updatedAt
+              .isAfter(DateTime.parse(row['updated_at']))) {
+        continue;
       }
+
+      final cow = existing ?? Cow();
+      cow.id = row['id'] as int;
+      cow.tagNumber = row['tag_number'] ?? '';
+      cow.breed = row['breed'] ?? 'Unknown';
+      cow.sex = row['sex'] == 'male' ? CowSex.male : CowSex.female;
+      cow.status = _parseCowStatus(row['status']);
+      cow.dateOfBirth = row['date_of_birth'] != null
+          ? DateTime.tryParse(row['date_of_birth'])
+          : null;
+      cow.acquisitionDate = DateTime.parse(row['acquisition_date']);
+      cow.source = row['source'];
+      cow.notes = row['notes'];
+      cow.photoPath = row['photo_path'];
+      cow.farmId = row['farm_id'];
+      cow.createdBy = row['created_by'];
+      cow.createdAt = DateTime.parse(row['created_at']);
+      cow.updatedAt = DateTime.parse(row['updated_at']);
+      cow.syncStatus = SyncStatus.synced;
+
+      await isar.writeTxn(() async {
+        await isar.cows.put(cow);
+      });
+    } catch (e) {
+      print('Error pulling cow ${row['id']}: $e');
     }
   }
+}
 
   Future<void> _pullTransactions(String farmId) async {
     final lastSync = await _lastSyncAt;
