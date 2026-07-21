@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/sync_service.dart';
 import '../screens/login_screen.dart';
+import 'profile_screen.dart';
 
 
 /// Dashboard — gives a quick overview of the farm's cattle.
@@ -25,17 +26,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _loading = true;
 
   // Farm info.
-  String? _farmName;
-  String? _userRole;
-  String? _inviteCode;
-
   late int _selectedYear;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    _loadFarmInfo();
   }
 
   Future<void> _loadData() async {
@@ -47,16 +43,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  Future<void> _loadFarmInfo() async {
-  final farmName = await FarmService().localFarmName;
-  final userRole = await FarmService().localUserRole;
-  final inviteCode = await FarmService().localInviteCode;
-  setState(() {
-    _farmName = farmName;
-    _userRole = userRole;
-    _inviteCode = inviteCode;
-  });
-}
 
   /// Counts how many cows have each status.
   Map<CowStatus, int> _statusCounts() {
@@ -193,112 +179,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-      title: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Dashboard',
-            style: TextStyle(fontSize: 18)),
-        if (_farmName != null)
-          Text(
-            _farmName!,
-            style: const TextStyle(
-                fontSize: 12, color: Colors.grey),
-          ),
-      ],
-      ),
+      title: const Text('Dashboard'),
       actions: [
-        // Show user's name next to the icon.
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.only(right: 4),
-            child: Text(
-              Supabase.instance.client.auth.currentUser
-                      ?.userMetadata?['full_name'] ??
-                  '',
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
+        Text(
+          Supabase.instance.client.auth.currentUser
+                  ?.userMetadata?['full_name']
+                  ?.toString()
+                  .split(' ')
+                  .first ??
+              '',
+          style: const TextStyle(fontSize: 13),
         ),
-
-        // TEMPORARY TEST BUTTON — remove after testing
-        IconButton(
-          icon: const Icon(Icons.sync),
-          tooltip: 'Force Full Sync',
-          onPressed: () async {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.remove('last_sync_at');
-
-            await SyncService().sync();
-
-            if (!context.mounted) return;
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Full sync triggered')),
-            );
-          },
-        ),
-
         IconButton(
           icon: const Icon(Icons.person_outline),
-          tooltip: 'Account',
-          onPressed: () async {
-            // Refresh user data first.
-            await Supabase.instance.client.auth.refreshSession();
-            final user = Supabase.instance.client.auth.currentUser;
-            final name = user?.userMetadata?['full_name'] ??
-                user?.email?.split('@').first ??
-                'Unknown';
-            final email = user?.email ?? 'Unknown';
-
-            if (context.mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Account'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        email,
-                        style: const TextStyle(
-                            fontSize: 13, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        Navigator.pop(context);
-                        await FarmService().clearLocalFarm();
-                        await Supabase.instance.client.auth.signOut();
-                        if (context.mounted) {
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                                builder: (context) => const LoginScreen()),
-                            (route) => false,
-                          );
-                        }
-                      },
-                      child: const Text(
-                        'Sign Out',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
+          tooltip: 'Profile',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const ProfileScreen()),
+            );
           },
         ),
       ],
@@ -311,102 +211,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.all(16),
               children: [
               // Farm info card — shown to all users.
-              if (_farmName != null)
-                Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.agriculture, size: 18),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                _farmName!,
-                                style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: _userRole == 'owner'
-                                    ? Colors.green.withValues(alpha: 0.2)
-                                    : Colors.blue.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                _userRole == 'owner' ? 'Owner' : 'Worker',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: _userRole == 'owner'
-                                      ? Colors.green
-                                      : Colors.blue,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Show invite code only to the owner.
-                        if (_userRole == 'owner' && _inviteCode != null) ...[
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Invite code for workers:',
-                            style: TextStyle(fontSize: 11, color: Colors.grey),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border:
-                                      Border.all(color: Colors.green.shade300),
-                                ),
-                                child: Text(
-                                  _inviteCode!,
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 4,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              // Copy to clipboard button.
-                              IconButton(
-                                icon: const Icon(Icons.copy, size: 18),
-                                tooltip: 'Copy invite code',
-                                onPressed: () {
-                                  // Copy to clipboard.
-                                  Clipboard.setData(ClipboardData(text: _inviteCode!));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Invite code copied!'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-              ),
+              
+              
               // Top summary cards: total, tagged, untagged.
               Row(
                   children: [
