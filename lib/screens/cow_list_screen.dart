@@ -5,6 +5,7 @@ import '../main.dart';
 import '../models/cow.dart';
 import 'add_cow_screen.dart';
 import 'cow_detail_screen.dart';
+import '../widgets/cow_avatar.dart';
 
 /// Displays the list of all cows with search and filter capabilities.
 class CowListScreen extends StatefulWidget {
@@ -333,23 +334,16 @@ class _CowListScreenState extends State<CowListScreen> {
                                   },
 
                                   // Photo if available, otherwise initial letter.
-                                  leading: CircleAvatar(
-                                    backgroundColor: _statusColor(cow.status)
-                                        .withValues(alpha: 0.15),
-                                    backgroundImage: cow.photoPath != null
-                                        ? FileImage(File(cow.photoPath!))
-                                        : null,
-                                    child: cow.photoPath == null
-                                        ? Text(
-                                            cow.tagNumber.isNotEmpty
-                                                ? cow.tagNumber
-                                                    .substring(0, 1)
-                                                    .toUpperCase()
-                                                : '?',
-                                            style: TextStyle(
-                                                color: _statusColor(cow.status)),
-                                          )
-                                        : null,
+                                  leading: CowAvatar(
+                                    photoPath: cow.photoPath,
+                                    radius: 22,
+                                    backgroundColor: _statusColor(cow.status).withValues(alpha: 0.15),
+                                    fallback: Text(
+                                      cow.tagNumber.isNotEmpty
+                                          ? cow.tagNumber.substring(0, 1).toUpperCase()
+                                          : '?',
+                                      style: TextStyle(color: _statusColor(cow.status)),
+                                    ),
                                   ),
 
                                   title: Text(

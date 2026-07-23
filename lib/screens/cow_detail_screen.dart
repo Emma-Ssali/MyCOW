@@ -9,6 +9,7 @@ import 'health_records_screen.dart';
 import 'breeding_records_screen.dart';
 import 'milk_production_screen.dart';
 import 'weight_records_screen.dart';
+import '../widgets/cow_avatar.dart';
 
 /// Displays the full details of a single cow, including
 /// all financial transactions and health records linked to this cow.
@@ -191,16 +192,11 @@ class _CowDetailScreenState extends State<CowDetailScreen> {
         children: [
           // Cow photo.
           Center(
-            child: CircleAvatar(
+            child: CowAvatar(
+              photoPath: cow.photoPath,
               radius: 70,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: cow.photoPath != null
-                  ? FileImage(File(cow.photoPath!))
-                  : null,
-              child: cow.photoPath == null
-                  ? const Icon(Icons.photo_camera,
-                      size: 40, color: Colors.grey)
-                  : null,
+              fallback: const Icon(
+                  Icons.photo_camera, size: 40, color: Colors.grey),
             ),
           ),
           const SizedBox(height: 16),

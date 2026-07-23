@@ -10,6 +10,7 @@ import '../models/breeding_record.dart';
 import '../models/milk_production.dart';
 import '../models/weight_record.dart';
 import 'farm_service.dart';
+import 'dart:io';
 
 /// SyncService — bidirectional sync between local Isar and Supabase.
 /// Push: sends pending local records to Supabase.
@@ -85,6 +86,15 @@ class SyncService {
 
     for (final cow in pending) {
       try {
+        // Upload photo to Supabase Storage if it exists locally.
+        String? photoUrl;
+        if (cow.photoPath != null && !cow.photoPath!.startsWith('http')) {
+          // Only upload if it's a local path (not already a URL).
+          photoUrl = await uploadPhoto(cow.photoPath!, cow.id);
+        } else {
+          photoUrl = cow.photoPath; // Already a cloud URL.
+        }
+
         await _supabase.from('cows').upsert({
           'id': cow.id,
           'tag_number': cow.tagNumber,
@@ -95,13 +105,21 @@ class SyncService {
           'acquisition_date': cow.acquisitionDate.toIso8601String(),
           'source': cow.source,
           'notes': cow.notes,
-          'photo_path': cow.photoPath,
+          'photo_path': photoUrl, // Use cloud URL instead of local path.
           'farm_id': farmId,
           'created_by': cow.createdBy,
           'created_at': cow.createdAt.toIso8601String(),
           'updated_at': cow.updatedAt.toIso8601String(),
           'sync_status': 'synced',
           'is_deleted': false,
+        });
+
+        await isar.writeTxn(() async {
+          cow.syncStatus = SyncStatus.synced;
+          cow.farmId = farmId;
+          // Save the cloud URL locally so we don't re-upload next time.
+          if (photoUrl != null) cow.photoPath = photoUrl;
+          await isar.cows.put(cow);
         });
 
         await isar.writeTxn(() async {
@@ -311,6 +329,31 @@ class SyncService {
           await isar.weightRecords.put(record);
         });
       }
+    }
+  }
+
+  /// Uploads a local photo file to Supabase Storage
+  /// and returns the public URL.
+  Future<String?> uploadPhoto(String localPath, int cowId) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) return null;
+
+      final extension = localPath.split('.').last;
+      final fileName = 'cow_$cowId\_${DateTime.now().millisecondsSinceEpoch}.$extension';
+
+      await _supabase.storage
+          .from('cow-photos')
+          .upload(fileName, file);
+
+      final publicUrl = _supabase.storage
+          .from('cow-photos')
+          .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (e) {
+      print('Photo upload error: $e');
+      return null;
     }
   }
 
