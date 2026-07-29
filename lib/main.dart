@@ -19,6 +19,7 @@ import 'screens/login_screen.dart';
 import 'screens/farm_setup_screen.dart';
 import 'services/farm_service.dart';
 import 'dart:async';
+import 'services/permission_service.dart';
 
 late Isar isar;
 
@@ -77,31 +78,30 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
   Timer? _syncTimer;
   StreamSubscription? _connectivitySubscription;
-
-  final List<Widget> _screens = const [
-    DashboardScreen(),
-    CowListScreen(),
-    FinanceScreen(),
-    HealthDashboardScreen(),
-  ];
+  bool _canViewFinance = false;
 
   @override
   void initState() {
     super.initState();
-    // Run sync every 5 minutes while app is open.
+    _loadPermissions();
+
     _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) {
       SyncService().sync();
     });
 
-    // Sync immediately when internet is regained.
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
-      results,
-    ) {
-      final hasInternet = results.any((r) => r != ConnectivityResult.none);
-      if (hasInternet) {
-        SyncService().sync();
-      }
+    _connectivitySubscription = Connectivity()
+        .onConnectivityChanged
+        .listen((results) {
+      final hasInternet =
+          results.any((r) => r != ConnectivityResult.none);
+      if (hasInternet) SyncService().sync();
     });
+  }
+
+  Future<void> _loadPermissions() async {
+    final canViewFinance =
+        await PermissionService().canViewFinance;
+    if (mounted) setState(() => _canViewFinance = canViewFinance);
   }
 
   @override
@@ -111,37 +111,51 @@ class _MainNavigationState extends State<MainNavigation> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _screens[_currentIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() => _currentIndex = index);
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.pets_outlined),
-            selectedIcon: Icon(Icons.pets),
-            label: 'My Cows',
-          ),
-          NavigationDestination(
+  List<Widget> get _screens => [
+        const DashboardScreen(),
+        const CowListScreen(),
+        if (_canViewFinance) const FinanceScreen(),
+        const HealthDashboardScreen(),
+      ];
+
+  List<NavigationDestination> get _destinations => [
+        const NavigationDestination(
+          icon: Icon(Icons.dashboard_outlined),
+          selectedIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
+        ),
+        const NavigationDestination(
+          icon: Icon(Icons.pets_outlined),
+          selectedIcon: Icon(Icons.pets),
+          label: 'My Cows',
+        ),
+        if (_canViewFinance)
+          const NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_outlined),
             selectedIcon: Icon(Icons.account_balance_wallet),
             label: 'Finance',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.health_and_safety_outlined),
-            selectedIcon: Icon(Icons.health_and_safety),
-            label: 'Health',
-          ),
-        ],
+        const NavigationDestination(
+          icon: Icon(Icons.health_and_safety_outlined),
+          selectedIcon: Icon(Icons.health_and_safety),
+          label: 'Health',
+        ),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    // Clamp index in case Finance tab is hidden.
+    final safeIndex =
+        _currentIndex.clamp(0, _screens.length - 1);
+
+    return Scaffold(
+      body: _screens[safeIndex],
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: safeIndex,
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
+        },
+        destinations: _destinations,
       ),
     );
   }

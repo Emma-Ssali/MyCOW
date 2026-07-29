@@ -6,6 +6,8 @@ import '../models/cow.dart';
 import 'add_cow_screen.dart';
 import 'cow_detail_screen.dart';
 import '../widgets/cow_avatar.dart';
+import '../services/permission_service.dart';
+import '../widgets/permission_guard.dart';
 
 /// Displays the list of all cows with search and filter capabilities.
 class CowListScreen extends StatefulWidget {
@@ -23,6 +25,8 @@ class _CowListScreenState extends State<CowListScreen> {
   List<Cow> _filteredCows = [];
 
   bool _loading = true;
+  bool _canManageCows = false;
+  bool _canDelete = false;
 
   // Search controller — listens to text input changes.
   final _searchController = TextEditingController();
@@ -38,10 +42,22 @@ class _CowListScreenState extends State<CowListScreen> {
   void initState() {
     super.initState();
     _loadCows();
+    _loadPermissions();
 
     // Re-run filter every time the search text changes.
     _searchController.addListener(_applyFilters);
   }
+
+  Future<void> _loadPermissions() async {
+  final canManage = await PermissionService().canManageCows;
+  final canDelete = await PermissionService().canDelete;
+  if (mounted) {
+    setState(() {
+      _canManageCows = canManage;
+      _canDelete = canDelete;
+    });
+  }
+}
 
   @override
   void dispose() {
@@ -357,13 +373,15 @@ class _CowListScreenState extends State<CowListScreen> {
                                     'Acquired: ${_formatDate(cow.acquisitionDate)}',
                                   ),
                                   isThreeLine: true,
-                                  trailing: IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () => _deleteCow(cow),
-                                  ),
+                                  trailing: _canDelete
+                                      ? IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.red,
+                                          ),
+                                          onPressed: () => _deleteCow(cow),
+                                        )
+                                      : null,
                                 ),
                               );
                             },
@@ -372,18 +390,22 @@ class _CowListScreenState extends State<CowListScreen> {
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final saved = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(builder: (context) => const AddCowScreen()),
-          );
-          if (saved == true) {
-            _loadCows();
-          }
-        },
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _canManageCows
+          ? FloatingActionButton(
+              onPressed: () async {
+                final saved = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddCowScreen(),
+                  ),
+                );
+                if (saved == true) {
+                  _loadCows();
+                }
+              },
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

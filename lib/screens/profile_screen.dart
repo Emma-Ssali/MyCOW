@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/farm_service.dart';
 import 'login_screen.dart';
+import '../services/permission_service.dart';
 
 /// Full profile screen — shows user info, farm details,
 /// invite code, and sign out button.
@@ -80,6 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirm == true && mounted) {
+      PermissionService().clearCache(); // ← add this
       await FarmService().clearLocalFarm();
       await Supabase.instance.client.auth.signOut();
       if (mounted) {
