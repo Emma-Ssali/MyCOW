@@ -112,87 +112,22 @@ lib/screens/add_weight_record_screen.dart
 
 ---
 
-## Phase 4: Cloud Synchronization & Multi-User Support — 🔄 IN PROGRESS
+## Phase 4: Cloud Synchronization & Multi-User Support — ✅ COMPLETE
 
-### Completed
-- ✅ Supabase project setup (CowManager, Central EU Frankfurt, free plan)
-- ✅ 6 database tables created in Supabase:
-     cows, farm_transactions, health_records,
-     breeding_records, milk_production, weight_records
-- ✅ 2 auth/farm tables: farms, farm_members
-- ✅ Supabase Storage bucket: cow-photos (public)
-- ✅ supabase_flutter package integrated (v2.15.0)
-- ✅ connectivity_plus package (v7.2.0)
-- ✅ shared_preferences package
-- ✅ Supabase initialized in main.dart alongside Isar
-
-**Sync Engine**
-- ✅ Push sync: all 6 data types pushed from Isar → Supabase
-     on app startup
-- ✅ Pull sync: remote changes pulled from Supabase → Isar
-     (last-write-wins conflict resolution using updated_at)
-- ✅ Periodic sync: auto-syncs every 5 minutes while app is open
-- ✅ Connectivity trigger: syncs instantly when phone regains internet
-     after being offline — critical for upcountry farmers
-- ✅ Photo sync: cow photos uploaded to Supabase Storage,
-     cloud URLs saved back to local Isar
-- ✅ CowAvatar widget: handles both local file paths and
-     remote cloud URLs
-
-**Authentication**
-- ✅ Login screen (email + password, show/hide, error handling)
-- ✅ Register screen (name, email, password, confirm password)
-- ✅ AuthGate: checks session on startup →
-     login / farm setup / main app
-- ✅ Session persists across app restarts
-
-**Farm Entity**
-- ✅ Farm creation (name, location, auto-generated 6-char invite code)
-- ✅ Farm joining (via invite code)
-- ✅ Farm Setup screen (shown after first login)
-- ✅ Farm data restored from Supabase on login if missing locally
-- ✅ Farm ID attached to all synced records
-
-**Profile Screen**
-- ✅ User name, email, role badge (Farm Owner / Farm Worker)
-- ✅ Farm name display
-- ✅ Invite code display with copy button (owners only)
-- ✅ Sign out with confirmation dialog
-- ✅ Sign out clears local farm data + navigates to login
-
-### Remaining in Phase 4
-- ⬜ User roles/permissions enforcement
-     (restrict what workers can do vs owners)
-
-### Files created in Phase 4
-
-lib/config/supabase_config.dart ← gitignored (API keys)
-lib/services/sync_service.dart ← bidirectional sync engine
-lib/services/farm_service.dart ← farm create/join/restore
-lib/screens/login_screen.dart
-lib/screens/register_screen.dart
-lib/screens/farm_setup_screen.dart
-lib/screens/profile_screen.dart
-lib/widgets/cow_avatar.dart
-
-
-### Files updated in Phase 4
-
-lib/main.dart ← Supabase init, AuthGate, background sync,
-periodic timer, connectivity listener
-pubspec.yaml ← supabase_flutter, connectivity_plus,
-shared_preferences added + pinned
-.gitignore ← supabase_config.dart protected
-android/app/src/main/AndroidManifest.xml
-← internet permission added
-
-
-### Security notes
-- `lib/config/supabase_config.dart` — gitignored, contains API keys
-- `android/app/google-services.json` — gitignored (Firebase removed)
-- RLS disabled on all tables (test mode)
-- ⚠️ Before production: enable RLS + write security rules
-
+### All items completed:
+- ✅ Supabase setup (tables, storage bucket)
+- ✅ Push sync (local → Supabase)
+- ✅ Pull sync (Supabase → local, last-write-wins)
+- ✅ Periodic sync (every 5 minutes)
+- ✅ Connectivity trigger (instant sync on internet reconnect)
+- ✅ Photo sync (Supabase Storage, cloud URLs)
+- ✅ Login / Register / AuthGate
+- ✅ Farm entity (create/join, invite code)
+- ✅ Profile screen (user info, farm details, sign out)
+- ✅ User roles + permissions (Owner/Worker/Viewer)
+  - Finance tab hidden from workers/viewers
+  - Delete buttons hidden from workers/viewers
+  - Add cow hidden from viewers
 ---
 
 ## Phase 5: Reporting, Exports & Production Release — ⬜ PENDING
