@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/sync_service.dart';
 import '../screens/login_screen.dart';
 import 'profile_screen.dart';
+import 'reports_screen.dart';
 
 
 /// Dashboard — gives a quick overview of the farm's cattle.
@@ -189,6 +190,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   .first ??
               '',
           style: const TextStyle(fontSize: 13),
+        ),
+        IconButton(
+          icon: const Icon(Icons.picture_as_pdf),
+          tooltip: 'Reports',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const ReportsScreen()),
+            );
+          },
         ),
         IconButton(
           icon: const Icon(Icons.person_outline),
