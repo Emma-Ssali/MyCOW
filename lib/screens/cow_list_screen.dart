@@ -8,6 +8,7 @@ import 'cow_detail_screen.dart';
 import '../widgets/cow_avatar.dart';
 import '../services/permission_service.dart';
 import '../widgets/permission_guard.dart';
+import '../services/farm_service.dart';
 
 /// Displays the list of all cows with search and filter capabilities.
 class CowListScreen extends StatefulWidget {
@@ -69,10 +70,21 @@ class _CowListScreenState extends State<CowListScreen> {
   Future<void> _loadCows() async {
     setState(() => _loading = true);
 
-    final cows = await isar.cows
-        .where()
-        .sortByUpdatedAtDesc()
-        .findAll();
+    final farmId = await FarmService().localFarmId;
+
+    List<Cow> cows;
+    if (farmId != null) {
+      cows = await isar.cows
+          .filter()
+          .farmIdEqualTo(farmId)
+          .sortByUpdatedAtDesc()
+          .findAll();
+    } else {
+      cows = await isar.cows
+          .where()
+          .sortByUpdatedAtDesc()
+          .findAll();
+    }
 
     setState(() {
       _allCows = cows;

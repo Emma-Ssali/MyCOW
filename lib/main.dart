@@ -172,48 +172,114 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  // Tracks what screen to show.
+  // null = still loading, true = main app, false = farm setup
   bool? _isLinkedToFarm;
+  bool _isCheckingFarm = false;
 
   @override
   void initState() {
     super.initState();
-    _checkFarm();
+    // Listen to auth changes immediately.
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) {
+        _isLinkedToFarm = null;
+        _checkFarm();
+      }
+      if (data.event == AuthChangeEvent.signedOut) {
+        if (mounted) setState(() => _isLinkedToFarm = null);
+      }
+    });
+
+    // Check on startup.
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      _checkFarm();
+    }
   }
 
   Future<void> _checkFarm() async {
-    // Try to restore farm data from Supabase if missing locally.
-    await FarmService().restoreFarmFromSupabase();
-    final linked = await FarmService().isLinkedToFarm;
-    if (mounted) setState(() => _isLinkedToFarm = linked);
-  }
+    if (_isCheckingFarm) return;
+    _isCheckingFarm = true;
 
+    try {
+      final linked = await FarmService().isLinkedToFarm;
+
+      if (linked) {
+        if (mounted) setState(() => _isLinkedToFarm = true);
+        return;
+      }
+
+      // Try restore from Supabase.
+      await FarmService().restoreFarmFromSupabase();
+      final linkedAfterRestore = await FarmService().isLinkedToFarm;
+
+      if (mounted) {
+        setState(() => _isLinkedToFarm = linkedAfterRestore);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLinkedToFarm = false);
+    } finally {
+      _isCheckingFarm = false;
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
+        final event = snapshot.data?.event;
+
+        // User just signed out — reset state and show login.
+        if (event == AuthChangeEvent.signedOut) {
+          _isLinkedToFarm = null;
+          return const LoginScreen();
+        }
+
+        // User just signed in — trigger farm check.
+        if (event == AuthChangeEvent.signedIn) {
+          if (_isLinkedToFarm == null && !_isCheckingFarm) {
+            _checkFarm();
+          }
+        }
+
         final session = Supabase.instance.client.auth.currentSession;
 
+        // Not logged in.
         if (session == null) {
-          // Not logged in — reset farm cache and show login.
           _isLinkedToFarm = null;
           return const LoginScreen();
         }
 
         // Logged in but still checking farm status.
         if (_isLinkedToFarm == null) {
-          _checkFarm();
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading your farm...',
+                      style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ),
           );
         }
 
-        // Logged in and farm check complete.
+        // Linked to a farm — show main app.
         if (_isLinkedToFarm == true) {
           return const MainNavigation();
         }
 
-        return const FarmSetupScreen();
+        // Not linked — show farm setup.
+        return FarmSetupScreen(
+          onFarmLinked: () {
+            setState(() => _isLinkedToFarm = true);
+          },
+        );
       },
     );
   }

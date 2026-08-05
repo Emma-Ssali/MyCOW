@@ -37,7 +37,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
-    final cows = await isar.cows.where().findAll();
+
+    // Get current farm ID.
+    final farmId = await FarmService().localFarmId;
+
+    // Only load cows belonging to this farm.
+    List<Cow> cows;
+    if (farmId != null) {
+      cows = await isar.cows
+          .filter()
+          .farmIdEqualTo(farmId)
+          .findAll();
+    } else {
+      cows = await isar.cows.where().findAll();
+    }
+
     setState(() {
       _cows = cows;
       _loading = false;
