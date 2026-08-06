@@ -12,6 +12,8 @@ class FarmService {
   static const _farmNameKey = 'farm_name';
   static const _userRoleKey = 'user_role';
   static const _inviteCodeKey = 'invite_code';
+  static const _farmLinkedKey = 'farm_linked';
+
 
   /// Returns the locally stored farm ID, or null if not joined yet.
   Future<String?> get localFarmId async {
@@ -55,6 +57,7 @@ class FarmService {
     await prefs.remove(_farmNameKey);
     await prefs.remove(_userRoleKey);
     await prefs.remove(_inviteCodeKey);
+    await prefs.remove(_farmLinkedKey); // ← add this
   }
 
   /// Generates a random 6-character invite code.
@@ -90,6 +93,7 @@ class FarmService {
     });
 
     await _saveFarmLocally(farmId, farmName, 'owner', inviteCode: inviteCode);
+    await markFarmLinked(); // Mark as linked after creation.
     return inviteCode;
   }
 
@@ -121,6 +125,7 @@ class FarmService {
     if (existing.isNotEmpty) {
       // Already a member — just save locally.
       await _saveFarmLocally(farmId, farmName, existing.first['role']);
+      await markFarmLinked(); // Mark as linked after joining.
       return;
     }
 
@@ -138,8 +143,12 @@ class FarmService {
 
   /// Checks if the current user is already linked to a farm.
   Future<bool> get isLinkedToFarm async {
-    final farmId = await localFarmId;
-    return farmId != null;
+    final prefs = await SharedPreferences.getInstance();
+    // Check the explicit linked flag first.
+    final linkedFlag = prefs.getBool(_farmLinkedKey) ?? false;
+    if (linkedFlag) return true;
+    // Fall back to checking farm_id.
+    return prefs.getString(_farmIdKey) != null;
   }
 
   /// Restores farm data from Supabase if local data is missing.
@@ -170,8 +179,16 @@ class FarmService {
 
       await _saveFarmLocally(farmId, farmName, role,
           inviteCode: role == 'owner' ? inviteCode : null);
+      await markFarmLinked(); // Mark as linked after restoration.
     } catch (e) {
       print('Error restoring farm: $e');
     }
+  }
+
+  /// Marks the farm as permanently linked.
+  /// This survives token refresh failures and offline sessions.
+  Future<void> markFarmLinked() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_farmLinkedKey, true);
   }
 }
